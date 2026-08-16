@@ -58,7 +58,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
               <span className="text-xs font-semibold uppercase text-muted-foreground">{pen.name}</span>
             </div>
             {(pen.problems || []).map((p) => (<p key={p.path || p.message} className="px-1 text-[11px] leading-tight text-destructive">{p.message}</p>))}
-            <div className="ml-[3ch] border-l border-border pl-2">
+            <div className="ml-[2ch] border-l border-border pl-2">
             <div className="flex h-5 items-center justify-between">
               <span className="text-[10px] uppercase leading-none text-muted-foreground">Series</span>
                   <Button size="icon" variant="ghost" className="h-5 w-5" title="New series" onClick={() => onNewSeries(pen.name, pen.path)}>
@@ -81,7 +81,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                     <Pencil className="h-3 w-3"/>
                   </Button>
                 </div>
-                {openSeries.includes(s.path) && (<div className="ml-[3ch] border-l border-border pl-2">
+                {openSeries.includes(s.path) && (<div className="ml-[2ch] border-l border-border pl-2">
                     <button type="button" className="w-full truncate py-0 text-left text-xs font-normal leading-tight text-muted-foreground hover:text-foreground" onClick={() => toggleSeriesFolders(s.path)}>
                       {seriesFoldersOpen(s.path) ? 'Hide folders' : 'Show folders'}
                     </button>
@@ -182,7 +182,7 @@ function SeriesFolders({ projectPath, types }) {
         bumpRefresh();
         setSelection({ type: 'file', projectPath, projectKind: 'series', kind, rel: created.rel, title: created.title });
     }
-    return (<div className="ml-[3ch] border-l border-border pl-2">
+    return (<div className="ml-[2ch] border-l border-border pl-2">
       {types.map((t) => {
             const block = byKind[t.code] || { files: [], missing: false, folder: '' };
             const items = block.files || [];
@@ -243,6 +243,6 @@ function StoryRow({ story, types, expanded, onToggle, onEdit }) {
           <Pencil className="h-3 w-3"/>
         </Button>
       </div>
-      {expanded && <div className="ml-[3ch] border-l border-border pl-2"><StoryFolders projectPath={story.path} types={types}/></div>}
+      {expanded && <div className="ml-[2ch] border-l border-border pl-2"><StoryFolders projectPath={story.path} types={types}/></div>}
     </div>);
 }
