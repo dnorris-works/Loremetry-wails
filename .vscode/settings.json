@@ -1,0 +1,21 @@
+{
+  "npm.autoDetect": "off",
+  "workbench.browser.openLocalhostLinks": false,
+  "simpleBrowser.useIntegratedBrowser": false,
+  "remote.autoForwardPorts": false,
+  "remote.portsAttributes": {
+    "5173": {
+      "label": "Vite (Wails dev only)",
+      "onAutoForward": "ignore"
+    },
+    "34115": {
+      "label": "Wails",
+      "onAutoForward": "ignore"
+    }
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "frontend/dist": true,
+    "build": true
+  }
+}

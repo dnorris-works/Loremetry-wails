@@ -1,0 +1,933 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	appdb "loremetry/internal/db"
+	"loremetry/internal/store"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+type ImportedFile struct {
+	Name string `json:"name"`
+	Text string `json:"text"`
+	Rel  string `json:"rel"`
+}
+
+type App struct {
+	ctx     context.Context
+	db      *sql.DB
+	store   *store.Store
+	dbPath  string
+	dbErr   error
+	watchMu sync.Mutex
+	watcher *fsnotify.Watcher
+	syncing bool
+}
+
+func NewApp() *App {
+	return &App{}
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	path, err := appdb.DefaultPath()
+	if err != nil {
+		a.dbErr = err
+		return
+	}
+	a.dbPath = path
+	conn, err := appdb.Open(path)
+	if err != nil {
+		a.dbErr = err
+		return
+	}
+	uid, err := appdb.LocalUserID(conn)
+	if err != nil {
+		a.dbErr = err
+		_ = conn.Close()
+		return
+	}
+	a.db = conn
+	a.store = &store.Store{DB: conn, UserID: uid}
+	a.startFolderWatch()
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	a.stopFolderWatch()
+	if a.db != nil {
+		_ = a.db.Close()
+	}
+}
+
+func (a *App) ready() (*store.Store, error) {
+	if a.dbErr != nil {
+		return nil, a.dbErr
+	}
+	if a.store == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+	return a.store, nil
+}
+
+func (a *App) GetSession() (store.AuthSession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AuthSession{Authenticated: false, Reason: err.Error()}, err
+	}
+	return s.Session()
+}
+
+func (a *App) ListSeries() ([]store.Series, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListSeries()
+}
+
+func (a *App) CreateSeries(in store.SeriesInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	if strings.TrimSpace(in.PenName) == "" {
+		return store.IDResult{}, fmt.Errorf("choose a pen name")
+	}
+	parent, err := a.penDir(in.PenName)
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	out, err := s.CreateSeries(in)
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	root, err := store.ApplySeriesTemplate(parent, in.Name)
+	if err != nil {
+		return out, err
+	}
+	if err := s.SetRootLink("series", out.ID, root); err != nil {
+		return out, err
+	}
+	if err := s.LinkProjectHeaders("series", out.ID, root); err != nil {
+		return out, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) UpdateSeries(id int64, in store.SeriesInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateSeries(id, in)
+}
+
+func (a *App) DeleteSeries(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteSeries(id)
+}
+
+func (a *App) GetSeriesBible(seriesID int64) (store.BibleDoc, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.BibleDoc{}, err
+	}
+	return s.GetSeriesBible(seriesID)
+}
+
+func (a *App) UpdateSeriesBible(seriesID int64, textContent string) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateSeriesBible(seriesID, textContent)
+}
+
+func (a *App) ListStories(seriesID int64) ([]store.Story, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListStories(seriesID)
+}
+
+func (a *App) CreateStory(in store.StoryInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	if in.SeriesID == 0 && strings.TrimSpace(in.PenName) == "" {
+		return store.IDResult{}, fmt.Errorf("choose a pen name")
+	}
+	if in.SeriesID > 0 {
+		list, _ := s.ListSeries()
+		for _, se := range list {
+			if se.ID == in.SeriesID && se.PenName != "" {
+				in.PenName = se.PenName
+				break
+			}
+		}
+	}
+	parent, seriesName, err := a.storyTemplateParent(s, in.SeriesID, in.PenName)
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	out, err := s.CreateStory(in)
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	root, err := store.ApplyBookTemplate(parent, in.Name, seriesName)
+	if err != nil {
+		return out, err
+	}
+	if err := s.SetRootLink("story", out.ID, root); err != nil {
+		return out, err
+	}
+	if err := s.LinkProjectHeaders("story", out.ID, root); err != nil {
+		return out, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) ListWritingTree() (store.WritingTree, error) {
+	root, err := a.writingRootIfSet()
+	if err != nil {
+		return store.ListWritingTree(""), nil
+	}
+	return store.ListWritingTree(root), nil
+}
+
+func (a *App) CreateWritingSeries(in store.WritingProjectInput) (store.PathResult, error) {
+	root, err := a.ensureWritingRoot()
+	if err != nil {
+		return store.PathResult{}, err
+	}
+	path, err := store.CreateSeriesOnDisk(root, in.PenName, in.PenPath, in.Name)
+	if err != nil {
+		return store.PathResult{}, err
+	}
+	a.startFolderWatch()
+	return store.PathResult{Path: path}, nil
+}
+
+func (a *App) CreateWritingBook(in store.WritingProjectInput) (store.PathResult, error) {
+	root, err := a.ensureWritingRoot()
+	if err != nil {
+		return store.PathResult{}, err
+	}
+	path, err := store.CreateBookOnDisk(root, in.PenName, in.PenPath, in.SeriesPath, in.Name)
+	if err != nil {
+		return store.PathResult{}, err
+	}
+	a.startFolderWatch()
+	return store.PathResult{Path: path}, nil
+}
+
+func (a *App) RenameWritingProject(path string, name string) (store.PathResult, error) {
+	next, err := store.RenameProjectDir(path, name)
+	if err != nil {
+		return store.PathResult{}, err
+	}
+	a.startFolderWatch()
+	return store.PathResult{Path: next}, nil
+}
+
+func (a *App) DeleteWritingProject(path string) (store.DeletedResult, error) {
+	if err := store.DeleteProjectDir(path); err != nil {
+		return store.DeletedResult{}, err
+	}
+	a.startFolderWatch()
+	return store.DeletedResult{Deleted: true}, nil
+}
+
+func (a *App) ListHeaderFiles(projectPath, projectKind, kind string) (store.HeaderList, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.HeaderList{}, err
+	}
+	return s.ListHeaderFiles(projectPath, projectKind, kind)
+}
+
+func (a *App) ReadHeaderFile(in store.HeaderFileRef) (store.HeaderFileContent, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.HeaderFileContent{}, err
+	}
+	return s.ReadHeaderFile(in)
+}
+
+func (a *App) WriteHeaderFile(in store.HeaderFileWrite) (store.HeaderFile, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.HeaderFile{}, err
+	}
+	return s.WriteHeaderFile(in)
+}
+
+func (a *App) CreateHeaderFile(in store.HeaderFileWrite) (store.HeaderFile, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.HeaderFile{}, err
+	}
+	out, err := s.CreateHeaderFile(in)
+	if err != nil {
+		return store.HeaderFile{}, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) DeleteHeaderFile(in store.HeaderFileRef) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	if err := s.DeleteHeaderFile(in); err != nil {
+		return store.DeletedResult{}, err
+	}
+	return store.DeletedResult{Deleted: true}, nil
+}
+
+func (a *App) PlaceHeaderFiles(in store.HeaderPlaceInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	if err := s.PlaceHeaderFiles(in); err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return store.UpdatedResult{Updated: true}, nil
+}
+
+func (a *App) ListHeaderOverrides(projectPath string) ([]store.FolderLink, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListHeaderOverrides(projectPath)
+}
+
+func (a *App) SetHeaderOverride(projectPath, kind, path string) (store.FolderLink, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderLink{}, err
+	}
+	link, err := s.SetHeaderOverride(projectPath, kind, path)
+	if err != nil {
+		return store.FolderLink{}, err
+	}
+	a.startFolderWatch()
+	return link, nil
+}
+
+func (a *App) ClearHeaderOverride(projectPath, kind string) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	if err := s.ClearHeaderOverride(projectPath, kind); err != nil {
+		return store.DeletedResult{}, err
+	}
+	a.startFolderWatch()
+	return store.DeletedResult{Deleted: true}, nil
+}
+
+func (a *App) ListPens() ([]store.Pen, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	root, _ := a.writingRootIfSet()
+	series, err := s.ListSeries()
+	if err != nil {
+		return nil, err
+	}
+	stories, err := s.ListStories(0)
+	if err != nil {
+		return nil, err
+	}
+	return store.ListPens(root, series, stories), nil
+}
+
+func (a *App) CreatePen(name string) (store.Pen, error) {
+	if strings.TrimSpace(name) == "" {
+		return store.Pen{}, fmt.Errorf("pen name is required")
+	}
+	path, err := a.penDir(name)
+	if err != nil {
+		return store.Pen{}, err
+	}
+	return store.Pen{Name: filepath.Base(path)}, nil
+}
+
+func (a *App) penDir(penName string) (string, error) {
+	root, err := a.ensureWritingRoot()
+	if err != nil {
+		return "", err
+	}
+	return store.EnsurePenDir(root, penName)
+}
+
+func (a *App) writingRootIfSet() (string, error) {
+	s, err := a.ready()
+	if err != nil {
+		return "", err
+	}
+	got, err := s.GetSetting("writing_root")
+	if err != nil || strings.TrimSpace(got.Value) == "" {
+		return "", fmt.Errorf("writing folder is not set")
+	}
+	return got.Value, nil
+}
+
+func (a *App) storyTemplateParent(s *store.Store, seriesID int64, penName string) (parent, seriesName string, err error) {
+	if seriesID == 0 {
+		parent, err = a.penDir(penName)
+		return parent, "", err
+	}
+	seriesName = "Series"
+	list, listErr := s.ListSeries()
+	if listErr == nil {
+		for _, se := range list {
+			if se.ID == seriesID {
+				seriesName = se.Name
+				break
+			}
+		}
+	}
+	root := s.RootPath("series", seriesID)
+	if root == "" {
+		parent, err = a.ensureWritingRoot()
+		return parent, seriesName, err
+	}
+	parent = filepath.Join(root, "Books")
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		return "", "", err
+	}
+	return parent, seriesName, nil
+}
+
+func (a *App) ensureWritingRoot() (string, error) {
+	s, err := a.ready()
+	if err != nil {
+		return "", err
+	}
+	got, err := s.GetSetting("writing_root")
+	if err == nil && strings.TrimSpace(got.Value) != "" {
+		info, statErr := os.Stat(got.Value)
+		if statErr == nil && info.IsDir() {
+			return got.Value, nil
+		}
+	}
+	if a.ctx == nil {
+		return "", fmt.Errorf("choose a writing folder in Settings")
+	}
+	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Choose folder for series and book files",
+	})
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(path) == "" {
+		return "", fmt.Errorf("a writing folder is required")
+	}
+	if _, err := s.PutSetting("writing_root", path); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (a *App) UpdateStory(id int64, in store.StoryInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateStory(id, in)
+}
+
+func (a *App) DeleteStory(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteStory(id)
+}
+
+func (a *App) ListChapters(storyID int64) ([]store.Chapter, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListChapters(storyID)
+}
+
+func (a *App) GetChapter(id int64) (store.Chapter, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.Chapter{}, err
+	}
+	return s.GetChapter(id)
+}
+
+func (a *App) CreateChapter(storyID int64, in store.ChapterInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	return s.CreateChapter(storyID, in)
+}
+
+func (a *App) UpdateChapter(id int64, in store.ChapterInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateChapter(id, in)
+}
+
+func (a *App) DeleteChapter(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteChapter(id)
+}
+
+func (a *App) ListStoryDocs(storyID int64) ([]store.StoryDoc, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListStoryDocs(storyID)
+}
+
+func (a *App) CreateStoryDoc(storyID int64, in store.DocInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	return s.CreateStoryDoc(storyID, in)
+}
+
+func (a *App) ListCharacters(storyID int64) ([]store.CharacterProfile, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListCharacters(storyID)
+}
+
+func (a *App) GetCharacter(id int64) (store.CharacterProfile, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.CharacterProfile{}, err
+	}
+	return s.GetCharacter(id)
+}
+
+func (a *App) ListDocumentTypes() ([]store.DocumentType, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListDocumentTypes()
+}
+
+func (a *App) ListSeriesDocs(seriesID int64) ([]store.SeriesDoc, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListSeriesDocs(seriesID)
+}
+
+func (a *App) GetSeriesDoc(id int64) (store.BibleDoc, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.BibleDoc{}, err
+	}
+	return s.GetSeriesDoc(id)
+}
+
+func (a *App) CreateSeriesDoc(seriesID int64, in store.SeriesDocInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	return s.CreateSeriesDoc(seriesID, in)
+}
+
+func (a *App) UpdateSeriesDoc(id int64, in store.SeriesDocInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateSeriesDoc(id, in)
+}
+
+func (a *App) DeleteSeriesDoc(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteSeriesDoc(id)
+}
+
+func (a *App) ListActs(storyID int64) ([]store.StoryAct, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListActs(storyID)
+}
+
+func (a *App) GetAct(id int64) (store.StoryAct, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.StoryAct{}, err
+	}
+	return s.GetAct(id)
+}
+
+func (a *App) CreateAct(storyID int64, in store.ActInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	return s.CreateAct(storyID, in)
+}
+
+func (a *App) UpdateAct(id int64, in store.ActInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateAct(id, in)
+}
+
+func (a *App) DeleteAct(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteAct(id)
+}
+
+func (a *App) ListSeriesCharacters(seriesID int64) ([]store.CharacterProfile, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListSeriesCharacters(seriesID)
+}
+
+func (a *App) CreateCharacter(in store.CharacterInput) (store.IDResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.IDResult{}, err
+	}
+	return s.CreateCharacter(in)
+}
+
+func (a *App) UpdateCharacter(id int64, in store.CharacterInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.UpdateCharacter(id, in)
+}
+
+func (a *App) DeleteCharacter(id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.DeleteCharacter(id)
+}
+
+func (a *App) GetSetting(key string) (store.SettingValue, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.SettingValue{}, err
+	}
+	return s.GetSetting(key)
+}
+
+func (a *App) PutSetting(key string, value string) (store.SettingValue, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.SettingValue{}, err
+	}
+	out, err := s.PutSetting(key, value)
+	if err == nil && key == "writing_root" {
+		a.startFolderWatch()
+	}
+	return out, err
+}
+
+func (a *App) ReadTextFile(path string) (string, error) {
+	return readTextFile(path)
+}
+
+func (a *App) PickImportFolder() (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("app not ready")
+	}
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Choose folder",
+	})
+}
+
+func (a *App) ListFolderLinks(scope string, ownerID int64) ([]store.FolderLink, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListFolderLinks(scope, ownerID)
+}
+
+func (a *App) SetFolderLink(in store.FolderLinkInput) (store.FolderLink, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderLink{}, err
+	}
+	link, err := s.SetFolderLink(in)
+	if err != nil {
+		return store.FolderLink{}, err
+	}
+	a.startFolderWatch()
+	a.emitFolderSync(nil)
+	return link, nil
+}
+
+func (a *App) ClearFolderLink(scope string, ownerID int64, kind string) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	out, err := s.ClearFolderLink(scope, ownerID, kind)
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) SyncAllFolders() ([]store.FolderChange, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	changes, err := s.SyncAllFolders()
+	if err != nil {
+		return nil, err
+	}
+	a.emitFolderSync(changes)
+	return changes, nil
+}
+
+func (a *App) emitFolderSync(changes []store.FolderChange) {
+	a.emitFoldersChanged("")
+	_ = changes
+}
+
+func (a *App) ReadImportFiles(paths []string) ([]ImportedFile, error) {
+	out := make([]ImportedFile, 0)
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		files, err := collectImportFiles(path)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, files...)
+	}
+	return out, nil
+}
+
+func collectImportFiles(root string) ([]ImportedFile, error) {
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		if !importableName(info.Name()) {
+			return nil, nil
+		}
+		f, err := readImported(root)
+		if err != nil {
+			return nil, err
+		}
+		f.Rel = filepath.Base(root)
+		return []ImportedFile{f}, nil
+	}
+	var out []ImportedFile
+	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name := d.Name()
+		if skipImportName(name) && path != root {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !importableName(name) {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		f, err := readImported(path)
+		if err != nil {
+			return err
+		}
+		f.Rel = filepath.ToSlash(filepath.Join(filepath.Base(root), rel))
+		out = append(out, f)
+		return nil
+	})
+	return out, err
+}
+
+func skipImportName(name string) bool {
+	if name == "." || name == ".." {
+		return false
+	}
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+	switch strings.ToLower(name) {
+	case "node_modules", "__pycache__", "dist", "build":
+		return true
+	default:
+		return false
+	}
+}
+
+func importableName(name string) bool {
+	lower := strings.ToLower(name)
+	for _, ext := range []string{".md", ".txt", ".markdown", ".text", ".fountain", ".json"} {
+		if strings.HasSuffix(lower, ext) {
+			return true
+		}
+	}
+	return !strings.Contains(filepath.Base(name), ".")
+}
+
+func readImported(path string) (ImportedFile, error) {
+	text, err := readTextFile(path)
+	if err != nil {
+		return ImportedFile{}, err
+	}
+	return ImportedFile{Name: filepath.Base(path), Text: text, Rel: filepath.Base(path)}, nil
+}
+
+func readTextFile(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("not a file")
+	}
+	if info.Size() > 8<<20 {
+		return "", fmt.Errorf("file too large")
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (a *App) PlaceStoryDoc(id int64, in store.PlaceInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.PlaceStoryDoc(id, in)
+}
+
+func (a *App) PlaceSeriesDoc(id int64, in store.PlaceInput) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.PlaceSeriesDoc(id, in)
+}
+
+func (a *App) ReorderActs(storyID int64, in store.IDList) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.ReorderActs(storyID, in)
+}
+
+func (a *App) ReorderStories(seriesID int64, in store.IDList) (store.UpdatedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UpdatedResult{}, err
+	}
+	return s.ReorderStories(seriesID, in)
+}
+
+func (a *App) AdminListTables() (store.AdminTables, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AdminTables{}, err
+	}
+	return s.AdminListTables()
+}
+
+func (a *App) AdminTableSchema(table string) (store.AdminSchema, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AdminSchema{}, err
+	}
+	return s.AdminTableSchema(table)
+}
+
+func (a *App) AdminQueryTable(table string, limit int, offset int) (store.AdminTableRows, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AdminTableRows{}, err
+	}
+	return s.AdminQueryTable(table, limit, offset)
+}
+
+func (a *App) AdminDeleteRow(table string, id int64) (store.DeletedResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.DeletedResult{}, err
+	}
+	return s.AdminDeleteRow(table, id)
+}
+
+func (a *App) AdminExecSQL(query string) (store.AdminSQLResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AdminSQLResult{}, err
+	}
+	return s.AdminExecSQL(query)
+}

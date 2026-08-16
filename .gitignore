@@ -1,0 +1,9 @@
+build/bin
+build/darwin
+frontend/dist
+frontend/node_modules
+node_modules
+*.db
+*.log
+.DS_Store
+

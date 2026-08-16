@@ -1,0 +1,213 @@
+{
+  "book_template": {
+    "type": "folder",
+    "name": "{{BookTitle}}",
+    "children": [
+      {
+        "type": "folder",
+        "name": "00_Admin",
+        "children": [
+          { "type": "file", "name": "Project-Brief.md" },
+          { "type": "file", "name": "Story-Promise.md" },
+          { "type": "file", "name": "Production-Checklist.md" },
+          { "type": "file", "name": "Contract-and-Rights.md" },
+          { "type": "file", "name": "Change-Log.md" }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "01_Manuscript",
+        "children": [
+          {
+            "type": "folder",
+            "name": "00_Current-Draft",
+            "children": [
+              {
+                "type": "folder",
+                "name": "Part-01",
+                "children": [
+                  {
+                    "type": "folder",
+                    "name": "Ch-001",
+                    "children": [
+                      { "type": "file", "name": "001-Scene-Title.md" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "folder",
+            "name": "01_Compiled",
+            "children": [
+              { "type": "file", "name": "{{BookTitle}}_current-manuscript.docx" }
+            ]
+          },
+          { "type": "folder", "name": "02_Archive", "children": [] },
+          { "type": "folder", "name": "03_Deleted-Scenes", "children": [] }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "02_Story-Elements",
+        "children": [
+          {
+            "type": "folder",
+            "name": "Characters",
+            "children": [
+              { "type": "folder", "name": "Main", "children": [] },
+              { "type": "folder", "name": "Supporting", "children": [] },
+              { "type": "folder", "name": "Minor", "children": [] },
+              { "type": "file", "name": "New-Characters-Introduced.md", "series_only": true }
+            ]
+          },
+          { "type": "folder", "name": "Locations", "children": [] },
+          { "type": "folder", "name": "World-Notes", "children": [] },
+          { "type": "file", "name": "Timeline.csv" },
+          { "type": "folder", "name": "Relationships", "children": [] },
+          { "type": "file", "name": "Themes-and-Motifs.md" },
+          { "type": "file", "name": "Continuity-Notes.md" }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "03_Plot",
+        "children": [
+          { "type": "file", "name": "Premise-and-Logline.md" },
+          { "type": "file", "name": "Outline.md" },
+          { "type": "file", "name": "Scene-Index.csv" },
+          { "type": "file", "name": "Chapter-Summaries.md" },
+          { "type": "file", "name": "Character-Arcs.md" },
+          { "type": "file", "name": "POV-Map.csv" },
+          { "type": "file", "name": "Open-Questions.md" }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "04_Research",
+        "children": [
+          { "type": "folder", "name": "Sources", "children": [] },
+          { "type": "folder", "name": "Notes", "children": [] },
+          { "type": "folder", "name": "Images", "children": [] },
+          { "type": "folder", "name": "Maps", "children": [] },
+          { "type": "folder", "name": "Permissions-and-Licenses", "children": [] }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "05_Editorial",
+        "children": [
+          { "type": "folder", "name": "Self-Edit", "children": [] },
+          { "type": "folder", "name": "Alpha-Readers", "children": [] },
+          { "type": "folder", "name": "Beta-Readers", "children": [] },
+          { "type": "folder", "name": "Developmental-Edit", "children": [] },
+          { "type": "folder", "name": "Copyedit", "children": [] },
+          { "type": "folder", "name": "Proofread", "children": [] }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "06_Publishing",
+        "children": [
+          { "type": "folder", "name": "Front-Matter", "children": [] },
+          { "type": "folder", "name": "Back-Matter", "children": [] },
+          { "type": "folder", "name": "Cover", "children": [] },
+          { "type": "folder", "name": "EPUB", "children": [] },
+          { "type": "folder", "name": "Print-PDF", "children": [] },
+          { "type": "file", "name": "Metadata.md" },
+          { "type": "folder", "name": "Retailer-Uploads", "children": [] }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "07_Marketing",
+        "children": [
+          { "type": "file", "name": "Blurb.md" },
+          { "type": "file", "name": "Keywords-and-Categories.md" },
+          { "type": "folder", "name": "Newsletter", "children": [] },
+          { "type": "folder", "name": "Ads", "children": [] },
+          { "type": "folder", "name": "Launch", "children": [] }
+        ]
+      }
+    ]
+  },
+  "series_template": {
+    "type": "folder",
+    "name": "{{SeriesName}}",
+    "children": [
+      {
+        "type": "folder",
+        "name": "00_Series-Bible",
+        "children": [
+          { "type": "file", "name": "Series-Overview.md" },
+          { "type": "file", "name": "Premise-and-Themes.md" },
+          { "type": "file", "name": "Series-Timeline.csv" },
+          { "type": "file", "name": "Series-Style-Guide.md" },
+          { "type": "file", "name": "Glossary.md" },
+          { "type": "file", "name": "Continuity-Master-List.md" },
+          {
+            "type": "folder",
+            "name": "Characters",
+            "children": [
+              { "type": "folder", "name": "Main", "children": [] },
+              { "type": "folder", "name": "Supporting", "children": [] },
+              { "type": "folder", "name": "Minor", "children": [] },
+              { "type": "file", "name": "Character-Arc-Across-Series.md" }
+            ]
+          },
+          {
+            "type": "folder",
+            "name": "World",
+            "children": [
+              { "type": "folder", "name": "Geography", "children": [] },
+              { "type": "folder", "name": "History", "children": [] },
+              { "type": "folder", "name": "Culture-and-Religion", "children": [] },
+              { "type": "folder", "name": "Politics-and-Factions", "children": [] },
+              { "type": "folder", "name": "Rules-Magic-or-Technology", "children": [] }
+            ]
+          },
+          { "type": "folder", "name": "Locations", "children": [] },
+          {
+            "type": "folder",
+            "name": "Relationships",
+            "children": [
+              { "type": "file", "name": "Relationship-Map.md" }
+            ]
+          },
+          { "type": "folder", "name": "Reference-Images", "children": [] }
+        ]
+      },
+      {
+        "type": "folder_group",
+        "name": "Books",
+        "note": "One instance of book_template per book, prefixed 01_, 02_, 03_...",
+        "template_ref": "book_template",
+        "example_names": ["01_Book-One_Title", "02_Book-Two_Title", "03_Book-Three_Title"]
+      },
+      {
+        "type": "folder",
+        "name": "98_Series-Admin",
+        "children": [
+          { "type": "file", "name": "Contract-and-Rights.md" },
+          { "type": "file", "name": "Publication-Schedule.md" },
+          { "type": "file", "name": "Budget-and-Expenses.csv" },
+          { "type": "file", "name": "Series-Change-Log.md" }
+        ]
+      },
+      {
+        "type": "folder",
+        "name": "99_Series-Marketing",
+        "children": [
+          { "type": "file", "name": "Series-Bible-Blurb.md" },
+          { "type": "file", "name": "Read-Order.md" },
+          { "type": "file", "name": "Series-Keywords-and-Categories.md" },
+          { "type": "folder", "name": "Box-Set-Assets", "children": [] },
+          { "type": "folder", "name": "Cross-Book-Promotions", "children": [] },
+          { "type": "folder", "name": "Newsletter", "children": [] },
+          { "type": "folder", "name": "Ads", "children": [] }
+        ]
+      }
+    ]
+  }
+}
