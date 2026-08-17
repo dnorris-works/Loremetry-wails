@@ -203,6 +203,30 @@ func (a *App) CreateStory(in store.StoryInput) (store.IDResult, error) {
 	return out, nil
 }
 
+func (a *App) ReadDiskFile(dir string, name string) (store.DiskFile, error) {
+	return store.ReadDiskFile(dir, name)
+}
+
+func (a *App) WriteDiskFile(in store.DiskFileWrite) (store.DiskFile, error) {
+	return store.WriteDiskFile(in)
+}
+
+func (a *App) CreateDiskFile(dir string, name string, text string) (store.DiskFile, error) {
+	out, err := store.CreateDiskFile(dir, name, text)
+	if err != nil {
+		return store.DiskFile{}, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) DeleteDiskFile(dir string, name string) (store.DeletedResult, error) {
+	if err := store.DeleteDiskFile(dir, name); err != nil {
+		return store.DeletedResult{}, err
+	}
+	return store.DeletedResult{Deleted: true}, nil
+}
+
 func (a *App) ListWritingTree() (store.WritingTree, error) {
 	root, err := a.writingRootIfSet()
 	if err != nil {

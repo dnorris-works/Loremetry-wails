@@ -793,10 +793,97 @@ export namespace store {
 	        this.pen_name = source["pen_name"];
 	    }
 	}
+	export class DirFile {
+	    name: string;
+	    path: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DirFile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	    }
+	}
+	export class DirNode {
+	    name: string;
+	    path: string;
+	    files: DirFile[];
+	    folders: DirNode[];
+
+	    static createFrom(source: any = {}) {
+	        return new DirNode(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.files = this.convertValues(source["files"], DirFile);
+	        this.folders = this.convertValues(source["folders"], DirNode);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class DiskFileWrite {
+	    dir: string;
+	    name: string;
+	    new_name: string;
+	    text: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DiskFileWrite(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.new_name = source["new_name"];
+	        this.text = source["text"];
+	    }
+	}
+	export class DiskFile {
+	    dir: string;
+	    name: string;
+	    path: string;
+	    text?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DiskFile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.text = source["text"];
+	    }
+	}
 	export class TreeBook {
 	    path: string;
 	    name: string;
 	    folder: string;
+	    tree: DirNode;
 	
 	    static createFrom(source: any = {}) {
 	        return new TreeBook(source);
@@ -807,7 +894,26 @@ export namespace store {
 	        this.path = source["path"];
 	        this.name = source["name"];
 	        this.folder = source["folder"];
+	        this.tree = this.convertValues(source["tree"], DirNode);
 	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class TreeProblem {
 	    path: string;
@@ -826,6 +932,7 @@ export namespace store {
 	export class TreeSeries {
 	    path: string;
 	    name: string;
+	    tree: DirNode;
 	    books: TreeBook[];
 	    problems: TreeProblem[];
 	
@@ -837,6 +944,7 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.name = source["name"];
+	        this.tree = this.convertValues(source["tree"], DirNode);
 	        this.books = this.convertValues(source["books"], TreeBook);
 	        this.problems = this.convertValues(source["problems"], TreeProblem);
 	    }

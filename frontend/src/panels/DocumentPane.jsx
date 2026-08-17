@@ -22,7 +22,7 @@ function useDiskChange(selection, dirty, onReload) {
             if (sel.type !== 'file')
                 return;
             const changed = typeof path === 'string' ? path : '';
-            if (changed && sel.rel && !changed.replace(/\\/g, '/').includes(sel.rel.replace(/\\/g, '/')))
+            if (changed && sel.name && !changed.replace(/\\/g, '/').includes(sel.name.replace(/\\/g, '/')))
                 return;
             void (async () => {
                 const msg = dirtyRef.current
@@ -32,11 +32,11 @@ function useDiskChange(selection, dirty, onReload) {
                     onReload();
             })();
         });
-    }, [selection.type, selection.rel, confirm, onReload]);
+    }, [selection.type, selection.name, confirm, onReload]);
 }
 function selectionKey(selection) {
     if (selection.type === 'file')
-        return `${selection.projectPath}:${selection.kind}:${selection.rel}`;
+        return `${selection.dir}:${selection.name}`;
     return '';
 }
 export function DocumentPane() {
@@ -62,12 +62,7 @@ export function DocumentPane() {
             if (!cancelled)
                 setLoaded(null);
             try {
-                const doc = await api.readHeaderFile({
-                    project_path: selection.projectPath,
-                    project_kind: selection.projectKind,
-                    kind: selection.kind,
-                    rel: selection.rel,
-                });
+                const doc = await api.readDiskFile(selection.dir, selection.name);
                 if (cancelled)
                     return;
                 setLoaded({ key, markdown: doc.text || '', title: doc.name });
@@ -105,16 +100,14 @@ export function DocumentPane() {
         if (!name || !loaded || selection.type !== 'file')
             return;
         try {
-            const saved = await api.writeHeaderFile({
-                project_path: selection.projectPath,
-                project_kind: selection.projectKind,
-                kind: selection.kind,
-                rel: selection.rel,
-                name,
+            const saved = await api.writeDiskFile({
+                dir: selection.dir,
+                name: selection.name,
+                new_name: name,
                 text: draft,
             });
-            setSelection({ ...selection, rel: saved.rel, title: saved.name });
-            setLoaded({ ...loaded, key: `${selection.projectPath}:${selection.kind}:${saved.rel}`, title: saved.name, markdown: draft });
+            setSelection({ type: 'file', dir: selection.dir, name: saved.name });
+            setLoaded({ key: `${selection.dir}:${saved.name}`, markdown: draft, title: saved.name });
             setTitle(saved.name);
             bumpRefresh();
         }
@@ -127,14 +120,8 @@ export function DocumentPane() {
         if (!(await confirm(`Delete "${name}"?`)))
             return;
         try {
-            if (selection.type === 'file') {
-                await api.deleteHeaderFile({
-                    project_path: selection.projectPath,
-                    project_kind: selection.projectKind,
-                    kind: selection.kind,
-                    rel: selection.rel,
-                });
-            }
+            if (selection.type === 'file')
+                await api.deleteDiskFile(selection.dir, selection.name);
             setSelection({ type: 'empty' });
             bumpRefresh();
         }
@@ -151,28 +138,19 @@ export function DocumentPane() {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
     }
     return (<div className="flex h-full flex-col">
-      <EditorActions dirty={dirty} onSave={() => void save()} onCancel={cancel} onClose={close} onDelete={() => void remove()}>
-        <Input className="h-8 font-medium" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Document name"/>
-      </EditorActions>
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+        <div className="min-w-0 flex-1">
+          <Input className="h-8 font-medium" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Document name"/>
+        </div>
+        <Button size="sm" onClick={() => void save()} disabled={!dirty}>Save</Button>
+        <Button size="sm" variant="outline" onClick={cancel} disabled={!dirty}>Cancel</Button>
+        <Button size="sm" variant="destructive" onClick={() => void remove()}>Delete</Button>
+        <Button size="icon" variant="ghost" onClick={() => void close()} title="Close">
+          <X className="h-4 w-4"/>
+        </Button>
+      </div>
       <div className="flex-1 overflow-hidden">
         <LexicalEditor docKey={`${loaded.key}:${editorNonce}`} markdown={loaded.markdown} onMarkdown={setDraft}/>
       </div>
-    </div>);
-}
-function EditorActions({ dirty, onSave, onCancel, onClose, onDelete, children, }) {
-    return (<div className="flex items-center gap-2 border-b border-border px-4 py-2">
-      <div className="min-w-0 flex-1">{children}</div>
-      <Button size="sm" onClick={onSave} disabled={!dirty}>
-        Save
-      </Button>
-      <Button size="sm" variant="outline" onClick={onCancel} disabled={!dirty}>
-        Cancel
-      </Button>
-      {onDelete && (<Button size="sm" variant="destructive" onClick={onDelete}>
-          Delete
-        </Button>)}
-      <Button size="icon" variant="ghost" onClick={onClose} title="Close">
-        <X className="h-4 w-4"/>
-      </Button>
     </div>);
 }

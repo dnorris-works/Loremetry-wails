@@ -39,6 +39,8 @@ export function CreateWritingBook(arg1:store.WritingProjectInput):Promise<store.
 
 export function CreateWritingSeries(arg1:store.WritingProjectInput):Promise<store.PathResult>;
 
+export function CreateDiskFile(arg1:string,arg2:string,arg3:string):Promise<store.DiskFile>;
+
 export function DeleteAct(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteChapter(arg1:number):Promise<store.DeletedResult>;
@@ -46,6 +48,8 @@ export function DeleteChapter(arg1:number):Promise<store.DeletedResult>;
 export function DeleteCharacter(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteHeaderFile(arg1:store.HeaderFileRef):Promise<store.DeletedResult>;
+
+export function DeleteDiskFile(arg1:string,arg2:string):Promise<store.DeletedResult>;
 
 export function DeleteSeries(arg1:number):Promise<store.DeletedResult>;
 
@@ -109,6 +113,8 @@ export function PutSetting(arg1:string,arg2:string):Promise<store.SettingValue>;
 
 export function ReadHeaderFile(arg1:store.HeaderFileRef):Promise<store.HeaderFileContent>;
 
+export function ReadDiskFile(arg1:string,arg2:string):Promise<store.DiskFile>;
+
 export function ReadImportFiles(arg1:Array<string>):Promise<Array<main.ImportedFile>>;
 
 export function ReadTextFile(arg1:string):Promise<string>;
@@ -140,3 +146,5 @@ export function UpdateSeriesDoc(arg1:number,arg2:store.SeriesDocInput):Promise<s
 export function UpdateStory(arg1:number,arg2:store.StoryInput):Promise<store.UpdatedResult>;
 
 export function WriteHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;
+
+export function WriteDiskFile(arg1:store.DiskFileWrite):Promise<store.DiskFile>;

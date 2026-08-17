@@ -74,6 +74,10 @@ export function CreateWritingSeries(arg1) {
   return window['go']['main']['App']['CreateWritingSeries'](arg1);
 }
 
+export function CreateDiskFile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateDiskFile'](arg1, arg2, arg3);
+}
+
 export function DeleteAct(arg1) {
   return window['go']['main']['App']['DeleteAct'](arg1);
 }
@@ -88,6 +92,10 @@ export function DeleteCharacter(arg1) {
 
 export function DeleteHeaderFile(arg1) {
   return window['go']['main']['App']['DeleteHeaderFile'](arg1);
+}
+
+export function DeleteDiskFile(arg1, arg2) {
+  return window['go']['main']['App']['DeleteDiskFile'](arg1, arg2);
 }
 
 export function DeleteSeries(arg1) {
@@ -214,6 +222,10 @@ export function ReadHeaderFile(arg1) {
   return window['go']['main']['App']['ReadHeaderFile'](arg1);
 }
 
+export function ReadDiskFile(arg1, arg2) {
+  return window['go']['main']['App']['ReadDiskFile'](arg1, arg2);
+}
+
 export function ReadImportFiles(arg1) {
   return window['go']['main']['App']['ReadImportFiles'](arg1);
 }
@@ -276,4 +288,8 @@ export function UpdateStory(arg1, arg2) {
 
 export function WriteHeaderFile(arg1) {
   return window['go']['main']['App']['WriteHeaderFile'](arg1);
+}
+
+export function WriteDiskFile(arg1) {
+  return window['go']['main']['App']['WriteDiskFile'](arg1);
 }

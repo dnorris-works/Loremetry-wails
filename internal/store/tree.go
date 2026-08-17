@@ -16,15 +16,29 @@ type TreeProblem struct {
 	Message string `json:"message"`
 }
 
+type DirFile struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+type DirNode struct {
+	Name    string    `json:"name"`
+	Path    string    `json:"path"`
+	Files   []DirFile `json:"files"`
+	Folders []DirNode `json:"folders"`
+}
+
 type TreeBook struct {
-	Path   string `json:"path"`
-	Name   string `json:"name"`
-	Folder string `json:"folder"`
+	Path   string  `json:"path"`
+	Name   string  `json:"name"`
+	Folder string  `json:"folder"`
+	Tree   DirNode `json:"tree"`
 }
 
 type TreeSeries struct {
 	Path     string        `json:"path"`
 	Name     string        `json:"name"`
+	Tree     DirNode       `json:"tree"`
 	Books    []TreeBook    `json:"books"`
 	Problems []TreeProblem `json:"problems"`
 }
@@ -78,14 +92,12 @@ func scanPen(path, name string) TreePen {
 		pen.Problems = append(pen.Problems, TreeProblem{Path: path, Message: err.Error()})
 		return pen
 	}
-	var seriesPaths []string
 	for _, e := range entries {
 		if !e.IsDir() || skipSyncDir(e.Name()) {
 			continue
 		}
 		child := filepath.Join(path, e.Name())
 		if looksSeries(child) {
-			seriesPaths = append(seriesPaths, child)
 			pen.Series = append(pen.Series, scanSeries(child, e.Name()))
 			continue
 		}
@@ -104,7 +116,6 @@ func scanPen(path, name string) TreePen {
 			Message: fmt.Sprintf("%q is not a series or book (need 00_Series-Bible, Books, or 01_Manuscript).", e.Name()),
 		})
 	}
-	_ = seriesPaths
 	sort.Slice(pen.Series, func(i, j int) bool {
 		return strings.ToLower(pen.Series[i].Name) < strings.ToLower(pen.Series[j].Name)
 	})
@@ -115,7 +126,7 @@ func scanPen(path, name string) TreePen {
 }
 
 func scanSeries(path, name string) TreeSeries {
-	se := TreeSeries{Path: path, Name: name, Books: []TreeBook{}, Problems: []TreeProblem{}}
+	se := TreeSeries{Path: path, Name: name, Tree: scanDirNode(path), Books: []TreeBook{}, Problems: []TreeProblem{}}
 	booksDir := filepath.Join(path, "Books")
 	info, err := os.Stat(booksDir)
 	if err != nil || !info.IsDir() {
@@ -148,7 +159,36 @@ func scanSeries(path, name string) TreeSeries {
 }
 
 func treeBook(path, folder string) TreeBook {
-	return TreeBook{Path: path, Folder: folder, Name: displayBookName(folder)}
+	return TreeBook{Path: path, Folder: folder, Name: displayBookName(folder), Tree: scanDirNode(path)}
+}
+
+func scanDirNode(path string) DirNode {
+	node := DirNode{Name: filepath.Base(path), Path: path, Files: []DirFile{}, Folders: []DirNode{}}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return node
+	}
+	for _, e := range entries {
+		if skipSyncDir(e.Name()) {
+			continue
+		}
+		child := filepath.Join(path, e.Name())
+		if e.IsDir() {
+			node.Folders = append(node.Folders, scanDirNode(child))
+			continue
+		}
+		if !textExt(e.Name()) {
+			continue
+		}
+		node.Files = append(node.Files, DirFile{Name: e.Name(), Path: child})
+	}
+	sort.Slice(node.Folders, func(i, j int) bool {
+		return strings.ToLower(node.Folders[i].Name) < strings.ToLower(node.Folders[j].Name)
+	})
+	sort.Slice(node.Files, func(i, j int) bool {
+		return strings.ToLower(node.Files[i].Name) < strings.ToLower(node.Files[j].Name)
+	})
+	return node
 }
 
 func displayBookName(folder string) string {
@@ -182,7 +222,7 @@ func hasDir(parent, name string) bool {
 }
 
 func CreateSeriesOnDisk(writingRoot, penName, penPath, seriesName string) (string, error) {
-	parent, err := resolvePenDir(writingRoot, penName, penPath)
+	parent, err := requirePenDir(writingRoot, penName, penPath)
 	if err != nil {
 		return "", err
 	}
@@ -197,18 +237,21 @@ func CreateBookOnDisk(writingRoot, penName, penPath, seriesPath, bookTitle strin
 		}
 		return ApplyBookTemplate(parent, bookTitle, filepath.Base(seriesPath))
 	}
-	parent, err := resolvePenDir(writingRoot, penName, penPath)
+	parent, err := requirePenDir(writingRoot, penName, penPath)
 	if err != nil {
 		return "", err
 	}
 	return ApplyBookTemplate(parent, bookTitle, "")
 }
 
-func resolvePenDir(writingRoot, penName, penPath string) (string, error) {
+func requirePenDir(writingRoot, penName, penPath string) (string, error) {
 	if info, err := os.Stat(penPath); err == nil && info.IsDir() {
 		return penPath, nil
 	}
-	return EnsurePenDir(writingRoot, penName)
+	if found := FindPenDir(writingRoot, penName); found != "" {
+		return found, nil
+	}
+	return "", fmt.Errorf("choose an existing author")
 }
 
 func RenameProjectDir(path, newDisplay string) (string, error) {

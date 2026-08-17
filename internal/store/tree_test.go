@@ -43,4 +43,13 @@ func TestListWritingTree(t *testing.T) {
 	if len(p.Problems) == 0 {
 		t.Fatal("expected problem for LooseNotes")
 	}
+	if len(p.Series[0].Tree.Folders) == 0 {
+		t.Fatal("expected series folder tree")
+	}
+	if len(p.Books[0].Tree.Folders) == 0 {
+		t.Fatal("expected book folder tree")
+	}
+	if _, err := CreateSeriesOnDisk(root, "Nobody", "", "X"); err == nil {
+		t.Fatal("expected missing author error")
+	}
 }

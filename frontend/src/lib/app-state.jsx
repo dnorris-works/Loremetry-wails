@@ -9,20 +9,6 @@ function toggleId(ids, id) {
 function addId(ids, id) {
     return ids.includes(id) ? ids : [...ids, id];
 }
-function folderList(map, parentId) {
-    return map[String(parentId)] || [];
-}
-function withFolder(map, parentId, code, on) {
-    const key = String(parentId);
-    const cur = map[key] || [];
-    const has = cur.includes(code);
-    if (on && has)
-        return map;
-    if (!on && !has)
-        return map;
-    const next = on ? [...cur, code] : cur.filter((c) => c !== code);
-    return { ...map, [key]: next };
-}
 async function readSetting(key) {
     try {
         const row = await api.getSetting(key);
@@ -36,35 +22,22 @@ export function AppStateProvider({ children }) {
     const [selection, setSelection] = useState({ type: 'empty' });
     const [openSeries, setOpenSeries] = useState([]);
     const [openStories, setOpenStories] = useState([]);
-    const [seriesFolders, setSeriesFolders] = useState({});
-    const [storyFolders, setStoryFolders] = useState({});
-    const [seriesFoldersHidden, setSeriesFoldersHidden] = useState([]);
+    const [openFolders, setOpenFolders] = useState([]);
     const [restoreOpen, setRestoreOpenState] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
     const ready = useRef(false);
-    const snapshot = useRef({
-        selection,
-        openSeries,
-        openStories,
-        seriesFolders,
-        storyFolders,
-        seriesFoldersHidden,
-        restoreOpen,
-    });
-    snapshot.current = { selection, openSeries, openStories, seriesFolders, storyFolders, seriesFoldersHidden, restoreOpen };
+    const snapshot = useRef({ selection, openSeries, openStories, openFolders, restoreOpen });
+    snapshot.current = { selection, openSeries, openStories, openFolders, restoreOpen };
     async function saveSession() {
         const s = snapshot.current;
         if (!s.restoreOpen)
             return;
-        const body = {
+        await api.putSetting(SESSION_KEY, JSON.stringify({
             selection: s.selection,
             openSeries: s.openSeries,
             openStories: s.openStories,
-            seriesFolders: s.seriesFolders,
-            storyFolders: s.storyFolders,
-            seriesFoldersHidden: s.seriesFoldersHidden,
-        };
-        await api.putSetting(SESSION_KEY, JSON.stringify(body));
+            openFolders: s.openFolders,
+        }));
     }
     useEffect(() => {
         let cancelled = false;
@@ -83,10 +56,7 @@ export function AppStateProvider({ children }) {
                             setSelection(saved.selection);
                         setOpenSeries(Array.isArray(saved.openSeries) ? saved.openSeries : []);
                         setOpenStories(Array.isArray(saved.openStories) ? saved.openStories : []);
-                        setSeriesFolders(saved.seriesFolders || {});
-                        setStoryFolders(saved.storyFolders || {});
-                        if (Array.isArray(saved.seriesFoldersHidden))
-                            setSeriesFoldersHidden(saved.seriesFoldersHidden);
+                        setOpenFolders(Array.isArray(saved.openFolders) ? saved.openFolders : []);
                     }
                     catch {
                         /* ignore */
@@ -106,7 +76,7 @@ export function AppStateProvider({ children }) {
             void saveSession();
         }, 300);
         return () => window.clearTimeout(t);
-    }, [selection, openSeries, openStories, seriesFolders, storyFolders, seriesFoldersHidden, restoreOpen]);
+    }, [selection, openSeries, openStories, openFolders, restoreOpen]);
     useEffect(() => {
         function flush() {
             if (document.visibilityState === 'hidden')
@@ -135,22 +105,14 @@ export function AppStateProvider({ children }) {
         toggleStory: (id) => setOpenStories((ids) => toggleId(ids, id)),
         ensureOpenSeries: (id) => setOpenSeries((ids) => addId(ids, id)),
         ensureOpenStory: (id) => setOpenStories((ids) => addId(ids, id)),
-        seriesFolderOpen: (seriesId, code) => folderList(seriesFolders, seriesId).includes(code),
-        storyFolderOpen: (storyId, code) => folderList(storyFolders, storyId).includes(code),
-        toggleSeriesFolder: (seriesId, code) => setSeriesFolders((m) => withFolder(m, seriesId, code, !folderList(m, seriesId).includes(code))),
-        toggleStoryFolder: (storyId, code) => setStoryFolders((m) => withFolder(m, storyId, code, !folderList(m, storyId).includes(code))),
-        ensureSeriesFolder: (seriesId, code) => {
-            setSeriesFolders((m) => withFolder(m, seriesId, code, true));
-            setSeriesFoldersHidden((ids) => ids.filter((id) => id !== seriesId));
-        },
-        ensureStoryFolder: (storyId, code) => setStoryFolders((m) => withFolder(m, storyId, code, true)),
-        seriesFoldersOpen: (seriesId) => !seriesFoldersHidden.includes(seriesId),
-        toggleSeriesFolders: (seriesId) => setSeriesFoldersHidden((ids) => toggleId(ids, seriesId)),
+        folderOpen: (path) => openFolders.includes(path),
+        toggleFolder: (path) => setOpenFolders((ids) => toggleId(ids, path)),
+        ensureFolder: (path) => setOpenFolders((ids) => addId(ids, path)),
         restoreOpen,
         setRestoreOpen,
         refreshKey,
         bumpRefresh: () => setRefreshKey((n) => n + 1),
-    }), [selection, openSeries, openStories, seriesFolders, storyFolders, seriesFoldersHidden, restoreOpen, refreshKey]);
+    }), [selection, openSeries, openStories, openFolders, restoreOpen, refreshKey]);
     return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function useAppState() {
