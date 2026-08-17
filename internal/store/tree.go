@@ -24,6 +24,7 @@ type DirFile struct {
 type DirNode struct {
 	Name    string    `json:"name"`
 	Path    string    `json:"path"`
+	Key     string    `json:"key"`
 	Label   string    `json:"label"`
 	Count   int       `json:"count"`
 	Hidden  bool      `json:"hidden"`

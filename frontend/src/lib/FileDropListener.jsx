@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { OnFileDrop, OnFileDropOff } from '../../wailsjs/runtime/runtime';
 import { api } from '@/api/client';
-import { isImportableName, recentHtmlFileDrop } from '@/lib/import-docs';
+import { recentHtmlFileDrop } from '@/lib/import-docs';
 import { currentSidebarDrag } from '@/lib/sidebar-drag';
 import { useAppState } from '@/lib/app-state';
 import { useNotice } from '@/components/confirm-dialog';
+
 export function FileDropListener() {
     const { bumpRefresh, setSelection, ensureFolder } = useAppState();
     const notice = useNotice();
@@ -34,17 +35,7 @@ export function FileDropListener() {
                 }
                 void (async () => {
                     try {
-                        const files = await api.readImportFiles(real);
-                        let last;
-                        for (const f of files) {
-                            if (!isImportableName(f.name))
-                                continue;
-                            last = await api.createDiskFile(dir, f.name, f.text);
-                        }
-                        if (!last) {
-                            await notice('Nothing to import.');
-                            return;
-                        }
+                        const last = await api.importDiskFiles(dir, real);
                         ensureFolder(dir);
                         bumpRefresh();
                         setSelection({ type: 'file', dir, name: last.name });

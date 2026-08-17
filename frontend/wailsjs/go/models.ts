@@ -129,6 +129,55 @@ export namespace store {
 	        this.tables = source["tables"];
 	    }
 	}
+	export class AnalysisItem {
+	    id: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	    }
+	}
+	export class AnalysisGroup {
+	    id: string;
+	    label: string;
+	    items: AnalysisItem[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.items = this.convertValues(source["items"], AnalysisItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class AuthSession {
 	    authenticated: boolean;
 	    id?: string;
@@ -346,6 +395,7 @@ export namespace store {
 	export class DirNode {
 	    name: string;
 	    path: string;
+	    key: string;
 	    label: string;
 	    count: number;
 	    hidden: boolean;
@@ -360,6 +410,7 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.path = source["path"];
+	        this.key = source["key"];
 	        this.label = source["label"];
 	        this.count = source["count"];
 	        this.hidden = source["hidden"];
@@ -691,6 +742,20 @@ export namespace store {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	    }
+	}
+	export class IncomingFile {
+	    name: string;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IncomingFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.text = source["text"];
 	    }
 	}
 	export class NameList {

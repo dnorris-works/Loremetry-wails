@@ -46,6 +46,10 @@ export function CreateDiskFile(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreateDiskFile'](arg1, arg2, arg3);
 }
 
+export function CreateDiskFiles(arg1, arg2) {
+  return window['go']['main']['App']['CreateDiskFiles'](arg1, arg2);
+}
+
 export function CreateHeaderFile(arg1) {
   return window['go']['main']['App']['CreateHeaderFile'](arg1);
 }
@@ -166,8 +170,16 @@ export function GetUISession() {
   return window['go']['main']['App']['GetUISession']();
 }
 
+export function ImportDiskFiles(arg1, arg2) {
+  return window['go']['main']['App']['ImportDiskFiles'](arg1, arg2);
+}
+
 export function ListActs(arg1) {
   return window['go']['main']['App']['ListActs'](arg1);
+}
+
+export function ListAnalysisCatalog() {
+  return window['go']['main']['App']['ListAnalysisCatalog']();
 }
 
 export function ListChapters(arg1) {

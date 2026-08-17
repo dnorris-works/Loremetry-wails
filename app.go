@@ -299,6 +299,19 @@ func (a *App) CreateDiskFile(dir string, name string, text string) (store.DiskFi
 	return out, nil
 }
 
+func (a *App) CreateDiskFiles(dir string, files []store.IncomingFile) (store.DiskFile, error) {
+	out, err := store.CreateDiskFiles(dir, files)
+	if err != nil {
+		return store.DiskFile{}, err
+	}
+	a.startFolderWatch()
+	return out, nil
+}
+
+func (a *App) ListAnalysisCatalog() []store.AnalysisGroup {
+	return store.AnalysisCatalog()
+}
+
 func (a *App) DeleteDiskFile(dir string, name string) (store.DeletedResult, error) {
 	if err := store.DeleteDiskFile(dir, name); err != nil {
 		return store.DeletedResult{}, err
@@ -952,6 +965,18 @@ func (a *App) ReadImportFiles(paths []string) ([]ImportedFile, error) {
 	return out, nil
 }
 
+func (a *App) ImportDiskFiles(dir string, paths []string) (store.DiskFile, error) {
+	files, err := a.ReadImportFiles(paths)
+	if err != nil {
+		return store.DiskFile{}, err
+	}
+	incoming := make([]store.IncomingFile, 0, len(files))
+	for _, f := range files {
+		incoming = append(incoming, store.IncomingFile{Name: f.Name, Text: f.Text})
+	}
+	return a.CreateDiskFiles(dir, incoming)
+}
+
 func collectImportFiles(root string) ([]ImportedFile, error) {
 	info, err := os.Stat(root)
 	if err != nil {
@@ -1017,13 +1042,7 @@ func skipImportName(name string) bool {
 }
 
 func importableName(name string) bool {
-	lower := strings.ToLower(name)
-	for _, ext := range []string{".md", ".txt", ".markdown", ".text", ".fountain", ".json"} {
-		if strings.HasSuffix(lower, ext) {
-			return true
-		}
-	}
-	return !strings.Contains(filepath.Base(name), ".")
+	return store.ImportableFileName(name)
 }
 
 func readImported(path string) (ImportedFile, error) {

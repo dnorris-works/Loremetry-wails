@@ -198,6 +198,7 @@ func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility
 		rel = parentRel + "/" + n.Name
 	}
 	rel = filepath.ToSlash(rel)
+	n.Key = rel
 	hidden := vis.IsHidden(projectPath, n.Name, rel)
 	if hidden && !vis.ShowHidden {
 		return n, false

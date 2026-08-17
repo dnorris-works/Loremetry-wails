@@ -104,6 +104,41 @@ func CreateDiskFile(dir, name, text string) (DiskFile, error) {
 	return DiskFile{Dir: dir, Name: fileName, Path: path}, nil
 }
 
+type IncomingFile struct {
+	Name string `json:"name"`
+	Text string `json:"text"`
+}
+
+func CreateDiskFiles(dir string, files []IncomingFile) (DiskFile, error) {
+	var last DiskFile
+	n := 0
+	for _, f := range files {
+		if !ImportableFileName(f.Name) {
+			continue
+		}
+		created, err := CreateDiskFile(dir, f.Name, f.Text)
+		if err != nil {
+			return DiskFile{}, err
+		}
+		last = created
+		n++
+	}
+	if n == 0 {
+		return DiskFile{}, fmt.Errorf("nothing to import")
+	}
+	return last, nil
+}
+
+func ImportableFileName(name string) bool {
+	lower := strings.ToLower(name)
+	for _, ext := range []string{".md", ".txt", ".markdown", ".text", ".fountain", ".json"} {
+		if strings.HasSuffix(lower, ext) {
+			return true
+		}
+	}
+	return !strings.Contains(filepath.Base(name), ".")
+}
+
 func DeleteDiskFile(dir, name string) error {
 	path, err := diskFilePath(dir, name)
 	if err != nil {

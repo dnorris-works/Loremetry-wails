@@ -14,6 +14,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
     const { setSelection, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
+    const [analysisGroups, setAnalysisGroups] = useState([]);
     const [theme, setTheme] = useState(readTheme());
     useEffect(() => {
         void (async () => {
@@ -25,12 +26,15 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
             }
         })();
     }, [refreshKey]);
+    useEffect(() => {
+        void api.listAnalysisCatalog().then(setAnalysisGroups).catch(() => setAnalysisGroups([]));
+    }, []);
     async function onToggleTheme() {
         const next = theme === 'dark' ? 'light' : 'dark';
         setTheme(next);
         await persistTheme(next, isAuthenticated());
     }
-    const [tab, setTab] = useState('authors');
+    const [tab, setTab] = useState('projects');
     const pens = tree.pens || [];
     return (<div className="flex h-full flex-col bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -48,15 +52,23 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         </div>
       </div>
       <div className="flex border-b border-border">
-        <button type="button" className={`flex-1 px-3 py-1.5 text-xs font-medium ${tab === 'authors' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('authors')}>
-          Authors
+        <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'projects' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('projects')}>
+          Projects
         </button>
-        <button type="button" className={`flex-1 px-3 py-1.5 text-xs font-medium ${tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('reports')}>
+        <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'analysis' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('analysis')}>
+          Analysis
+        </button>
+        <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('reports')}>
           Reports
         </button>
       </div>
       <div className="flex-1 overflow-auto p-2">
-        {tab === 'reports' ? (<p className="px-1 text-xs text-muted-foreground">No reports yet.</p>) : (<>
+        {tab === 'analysis' && analysisGroups.map((g) => (<div key={g.id} className="mb-3">
+          <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
+          {(g.items || []).map((item) => (<div key={item.id} className="truncate px-1 py-0.5 text-xs leading-tight">{item.label}</div>))}
+        </div>))}
+        {tab === 'reports' && (<p className="px-1 text-xs text-muted-foreground">No saved reports yet.</p>)}
+        {tab === 'projects' && (<>
         {(tree.problems || []).map((p) => (<p key={p.path || p.message} className="mb-2 px-1 text-[11px] text-destructive">{p.message}</p>))}
         {pens.map((pen) => {
           const penOpen = !openFolders.includes(pen.path);
@@ -148,7 +160,7 @@ function FolderNode({ node, projectPath }) {
     const folders = node.folders || [];
     const hasKids = files.length > 0 || folders.length > 0;
     const open = openFolders.includes(node.path);
-    const key = folderKey(projectPath, node.path, node.name);
+    const key = node.key || node.name;
     async function addDoc() {
         const created = await api.createDiskFile(node.path, '', '');
         bumpRefresh();
@@ -160,11 +172,7 @@ function FolderNode({ node, projectPath }) {
         if (!incoming.length)
             return;
         markHtmlFileDrop();
-        let last;
-        for (const f of incoming)
-            last = await api.createDiskFile(node.path, f.name, f.text);
-        if (!last)
-            return;
+        const last = await api.createDiskFiles(node.path, incoming);
         bumpRefresh();
         await ensureFolder(node.path);
         setSelection({ type: 'file', dir: node.path, name: last.name });
@@ -203,14 +211,6 @@ function FolderNode({ node, projectPath }) {
         {folders.map((child) => (<FolderNode key={child.path} node={child} projectPath={projectPath}/>))}
       </div>)}
     </div>);
-}
-
-function folderKey(projectPath, nodePath, name) {
-    const root = (projectPath || '').replace(/\\/g, '/');
-    const p = (nodePath || '').replace(/\\/g, '/');
-    if (root && p.startsWith(root + '/'))
-        return p.slice(root.length + 1);
-    return name;
 }
 
 function FileRow({ dir, file, onDelete }) {

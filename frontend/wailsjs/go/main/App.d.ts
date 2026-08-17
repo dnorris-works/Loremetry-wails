@@ -25,6 +25,8 @@ export function CreateCharacter(arg1:store.CharacterInput):Promise<store.IDResul
 
 export function CreateDiskFile(arg1:string,arg2:string,arg3:string):Promise<store.DiskFile>;
 
+export function CreateDiskFiles(arg1:string,arg2:Array<store.IncomingFile>):Promise<store.DiskFile>;
+
 export function CreateHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;
 
 export function CreatePen(arg1:string):Promise<store.Pen>;
@@ -85,7 +87,11 @@ export function GetSetting(arg1:string):Promise<store.SettingValue>;
 
 export function GetUISession():Promise<store.UISession>;
 
+export function ImportDiskFiles(arg1:string,arg2:Array<string>):Promise<store.DiskFile>;
+
 export function ListActs(arg1:number):Promise<Array<store.StoryAct>>;
+
+export function ListAnalysisCatalog():Promise<Array<store.AnalysisGroup>>;
 
 export function ListChapters(arg1:number):Promise<Array<store.Chapter>>;
 
