@@ -20,7 +20,7 @@
         "children": [
           {
             "type": "folder",
-            "name": "00_Current-Draft",
+            "name": "01_Chapters",
             "children": [
               {
                 "type": "folder",
@@ -37,15 +37,7 @@
               }
             ]
           },
-          {
-            "type": "folder",
-            "name": "01_Compiled",
-            "children": [
-              { "type": "file", "name": "{{BookTitle}}_current-manuscript.md" }
-            ]
-          },
-          { "type": "folder", "name": "02_Archive", "children": [] },
-          { "type": "folder", "name": "03_Deleted-Scenes", "children": [] }
+          { "type": "folder", "name": "02_Archive", "children": [] }
         ]
       },
       {
@@ -113,6 +105,13 @@
           { "type": "folder", "name": "Front-Matter", "children": [] },
           { "type": "folder", "name": "Back-Matter", "children": [] },
           { "type": "folder", "name": "Cover", "children": [] },
+          {
+            "type": "folder",
+            "name": "Compiled",
+            "children": [
+              { "type": "file", "name": "{{BookTitle}}_current-manuscript.md" }
+            ]
+          },
           { "type": "folder", "name": "EPUB", "children": [] },
           { "type": "folder", "name": "Print-PDF", "children": [] },
           { "type": "file", "name": "Metadata.md" },

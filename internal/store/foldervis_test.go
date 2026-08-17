@@ -25,6 +25,21 @@ func TestFilterWritingTreeHidesNamedFolders(t *testing.T) {
 	if !hasFolder(filtered.Pens[0].Books[0].Tree, "01_Manuscript") {
 		t.Fatal("expected manuscript visible")
 	}
+	ms := findFolder(filtered.Pens[0].Books[0].Tree, "01_Manuscript")
+	if ms == nil || ms.Required {
+		t.Fatal("01_Manuscript is not an analysis role")
+	}
+	draft := findFolder(*ms, "01_Chapters")
+	if draft == nil || !draft.Required {
+		t.Fatal("expected chapters marked required")
+	}
+	if f := findFolder(filtered.Pens[0].Books[0].Tree, "04_Research"); f != nil && f.Required {
+		t.Fatal("research is not needed by any analysis")
+	}
+	plot := findFolder(filtered.Pens[0].Books[0].Tree, "03_Plot")
+	if plot == nil || !plot.Required {
+		t.Fatal("expected plot marked required")
+	}
 	vis.ShowHidden = true
 	shown := FilterWritingTree(ListWritingTree(root), vis)
 	m := findFolder(shown.Pens[0].Books[0].Tree, "07_Marketing")

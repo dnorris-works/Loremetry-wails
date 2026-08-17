@@ -27,7 +27,8 @@ type DirNode struct {
 	Key     string    `json:"key"`
 	Label   string    `json:"label"`
 	Count   int       `json:"count"`
-	Hidden  bool      `json:"hidden"`
+	Hidden   bool      `json:"hidden"`
+	Required bool      `json:"required"`
 	Files   []DirFile `json:"files"`
 	Folders []DirNode `json:"folders"`
 }

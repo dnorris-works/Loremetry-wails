@@ -156,7 +156,7 @@ func DeleteDiskFile(dir, name string) error {
 
 func shouldRenumberDir(dir string) bool {
 	base := filepath.Base(dir)
-	if base == "00_Current-Draft" {
+	if base == "01_Chapters" || base == "00_Current-Draft" {
 		return true
 	}
 	files, err := listTextFileMeta(dir)

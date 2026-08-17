@@ -17,4 +17,8 @@ func TestAnalysisCatalog(t *testing.T) {
 	if n < 30 {
 		t.Fatalf("items %d", n)
 	}
+	got, ok := GetAnalysisDetail("show_dont_tell")
+	if !ok || got.Label == "" || got.Description == "" {
+		t.Fatalf("detail %+v %v", got, ok)
+	}
 }

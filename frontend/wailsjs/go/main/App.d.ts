@@ -69,6 +69,8 @@ export function EnsureOpenStory(arg1:string):Promise<store.UISession>;
 
 export function GetAct(arg1:number):Promise<store.StoryAct>;
 
+export function GetAnalysis(arg1:string):Promise<store.AnalysisDetail>;
+
 export function GetChapter(arg1:number):Promise<store.Chapter>;
 
 export function GetCharacter(arg1:number):Promise<store.CharacterProfile>;
@@ -120,6 +122,8 @@ export function ListStoryDocs(arg1:number):Promise<Array<store.StoryDoc>>;
 export function ListTemplateFolders():Promise<store.TemplateFolderLists>;
 
 export function ListWritingTree():Promise<store.WritingTree>;
+
+export function MatchAnalysisSources(arg1:string):Promise<store.AnalysisSources>;
 
 export function PickImportFolder():Promise<string>;
 

@@ -129,9 +129,47 @@ export namespace store {
 	        this.tables = source["tables"];
 	    }
 	}
+	export class AnalysisDetail {
+	    id: string;
+	    label: string;
+	    group: string;
+	    description: string;
+	    needs: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.group = source["group"];
+	        this.description = source["description"];
+	        this.needs = source["needs"];
+	    }
+	}
+	export class AnalysisFile {
+	    name: string;
+	    path: string;
+	    rel: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.rel = source["rel"];
+	    }
+	}
 	export class AnalysisItem {
 	    id: string;
 	    label: string;
+	    description: string;
+	    needs: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisItem(source);
@@ -141,6 +179,8 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.label = source["label"];
+	        this.description = source["description"];
+	        this.needs = source["needs"];
 	    }
 	}
 	export class AnalysisGroup {
@@ -178,6 +218,78 @@ export namespace store {
 		}
 	}
 	
+	export class AnalysisRoleMatch {
+	    role: string;
+	    rel: string;
+	    path: string;
+	    present: boolean;
+	    files: AnalysisFile[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisRoleMatch(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.role = source["role"];
+	        this.rel = source["rel"];
+	        this.path = source["path"];
+	        this.present = source["present"];
+	        this.files = this.convertValues(source["files"], AnalysisFile);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AnalysisSources {
+	    project_path: string;
+	    kind: string;
+	    roles: AnalysisRoleMatch[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisSources(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.project_path = source["project_path"];
+	        this.kind = source["kind"];
+	        this.roles = this.convertValues(source["roles"], AnalysisRoleMatch);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class AuthSession {
 	    authenticated: boolean;
 	    id?: string;
@@ -399,6 +511,7 @@ export namespace store {
 	    label: string;
 	    count: number;
 	    hidden: boolean;
+	    required: boolean;
 	    files: DirFile[];
 	    folders: DirNode[];
 	
@@ -414,6 +527,7 @@ export namespace store {
 	        this.label = source["label"];
 	        this.count = source["count"];
 	        this.hidden = source["hidden"];
+	        this.required = source["required"];
 	        this.files = this.convertValues(source["files"], DirFile);
 	        this.folders = this.convertValues(source["folders"], DirNode);
 	    }

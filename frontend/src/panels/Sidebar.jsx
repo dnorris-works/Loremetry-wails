@@ -11,7 +11,7 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
-    const { setSelection, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
+    const { setSelection, analysisId, setAnalysis, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
     const [analysisGroups, setAnalysisGroups] = useState([]);
@@ -65,7 +65,9 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
       <div className="flex-1 overflow-auto p-2">
         {tab === 'analysis' && analysisGroups.map((g) => (<div key={g.id} className="mb-3">
           <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
-          {(g.items || []).map((item) => (<div key={item.id} className="truncate px-1 py-0.5 text-xs leading-tight">{item.label}</div>))}
+          {(g.items || []).map((item) => (<button key={item.id} type="button" className={`w-full truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+            {item.label}
+          </button>))}
         </div>))}
         {tab === 'reports' && (<p className="px-1 text-xs text-muted-foreground">No saved reports yet.</p>)}
         {tab === 'projects' && (<>
@@ -192,6 +194,7 @@ function FolderNode({ node, projectPath }) {
         }}>
       <div className="flex h-5 items-center">
         <button type="button" className={`min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight hover:bg-accent ${node.hidden ? 'text-muted-foreground/70' : 'text-foreground'}`} onClick={() => toggleFolder(node.path)}>
+          {node.required && <span className="mr-1 text-red-600 dark:text-red-400" aria-hidden="true">*</span>}
           {node.label || `${node.name} (${node.count ?? files.length})`}
         </button>
         <Button size="icon" variant="ghost" className="h-5 w-5" title={node.hidden ? 'Show in this story' : 'Hide in this story'} onClick={() => void setHidden(!node.hidden)}>

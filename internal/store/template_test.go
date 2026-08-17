@@ -32,7 +32,7 @@ func TestApplySeriesAndBookTemplates(t *testing.T) {
 	if filepath.Base(bookRoot) != "01_Book One" {
 		t.Fatalf("book folder %q", filepath.Base(bookRoot))
 	}
-	if _, err := os.Stat(filepath.Join(bookRoot, "01_Manuscript", "00_Current-Draft", "Part-01", "Ch-001", "001-Scene-Title.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(bookRoot, "01_Manuscript", "01_Chapters", "Part-01", "Ch-001", "001-Scene-Title.md")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(bookRoot, "02_Story-Elements", "Characters", "New-Characters-Introduced.md")); err != nil {

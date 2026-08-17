@@ -182,9 +182,10 @@ func filterPen(pen TreePen, vis FolderVisibility) TreePen {
 }
 
 func filterProjectTree(projectPath string, node DirNode, vis FolderVisibility) DirNode {
+	need := requiredFolderRels(projectPath)
 	kept := make([]DirNode, 0, len(node.Folders))
 	for _, child := range node.Folders {
-		if next, ok := filterFolder(projectPath, "", child, vis); ok {
+		if next, ok := filterFolder(projectPath, "", child, vis, need); ok {
 			kept = append(kept, next)
 		}
 	}
@@ -192,13 +193,38 @@ func filterProjectTree(projectPath string, node DirNode, vis FolderVisibility) D
 	return recount(node)
 }
 
-func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility) (DirNode, bool) {
+func requiredFolderRels(projectPath string) map[string]bool {
+	used := map[string]bool{}
+	for _, g := range AnalysisCatalog() {
+		for _, it := range g.Items {
+			for _, n := range it.Needs {
+				used[n] = true
+			}
+		}
+	}
+	specs := bookAnalysisRoles()
+	if looksSeries(projectPath) {
+		specs = seriesAnalysisRoles()
+	}
+	out := map[string]bool{}
+	for _, spec := range specs {
+		if spec.file || !used[spec.role] {
+			continue
+		}
+		rel := filepath.ToSlash(spec.rel)
+		out[rel] = true
+	}
+	return out
+}
+
+func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility, need map[string]bool) (DirNode, bool) {
 	rel := n.Name
 	if parentRel != "" {
 		rel = parentRel + "/" + n.Name
 	}
 	rel = filepath.ToSlash(rel)
 	n.Key = rel
+	n.Required = need[rel]
 	hidden := vis.IsHidden(projectPath, n.Name, rel)
 	if hidden && !vis.ShowHidden {
 		return n, false
@@ -206,7 +232,7 @@ func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility
 	n.Hidden = hidden
 	kids := make([]DirNode, 0, len(n.Folders))
 	for _, c := range n.Folders {
-		if next, ok := filterFolder(projectPath, rel, c, vis); ok {
+		if next, ok := filterFolder(projectPath, rel, c, vis, need); ok {
 			kids = append(kids, next)
 		}
 	}

@@ -134,6 +134,10 @@ export function GetAct(arg1) {
   return window['go']['main']['App']['GetAct'](arg1);
 }
 
+export function GetAnalysis(arg1) {
+  return window['go']['main']['App']['GetAnalysis'](arg1);
+}
+
 export function GetChapter(arg1) {
   return window['go']['main']['App']['GetChapter'](arg1);
 }
@@ -236,6 +240,10 @@ export function ListTemplateFolders() {
 
 export function ListWritingTree() {
   return window['go']['main']['App']['ListWritingTree']();
+}
+
+export function MatchAnalysisSources(arg1) {
+  return window['go']['main']['App']['MatchAnalysisSources'](arg1);
 }
 
 export function PickImportFolder() {

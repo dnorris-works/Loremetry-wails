@@ -312,6 +312,18 @@ func (a *App) ListAnalysisCatalog() []store.AnalysisGroup {
 	return store.AnalysisCatalog()
 }
 
+func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
+	got, ok := store.GetAnalysisDetail(id)
+	if !ok {
+		return store.AnalysisDetail{}, fmt.Errorf("unknown analysis")
+	}
+	return got, nil
+}
+
+func (a *App) MatchAnalysisSources(projectPath string) store.AnalysisSources {
+	return store.MatchAnalysisSources(projectPath)
+}
+
 func (a *App) DeleteDiskFile(dir string, name string) (store.DeletedResult, error) {
 	if err := store.DeleteDiskFile(dir, name); err != nil {
 		return store.DeletedResult{}, err

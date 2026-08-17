@@ -8,7 +8,7 @@ import (
 
 func TestRenameDraftSectionsPartToAct(t *testing.T) {
 	root := t.TempDir()
-	from := filepath.Join(root, "01_Manuscript", "00_Current-Draft", "Part-01")
+	from := filepath.Join(root, "01_Manuscript", "01_Chapters", "Part-01")
 	if err := os.MkdirAll(from, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -16,7 +16,7 @@ func TestRenameDraftSectionsPartToAct(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("renamed %d %v", n, err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "01_Manuscript", "00_Current-Draft", "Act-01")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "01_Manuscript", "01_Chapters", "Act-01")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -27,7 +27,7 @@ func TestApplyBookTemplateUsesAct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(book, "01_Manuscript", "00_Current-Draft", "Act-01")); err != nil {
+	if _, err := os.Stat(filepath.Join(book, "01_Manuscript", "01_Chapters", "Act-01")); err != nil {
 		t.Fatal(err)
 	}
 }

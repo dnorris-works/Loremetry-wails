@@ -3,6 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { LexicalEditor } from '@/editor/LexicalEditor';
+import { AnalysisPane } from '@/panels/AnalysisPane';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
@@ -40,7 +41,7 @@ function selectionKey(selection) {
     return '';
 }
 export function DocumentPane() {
-    const { selection, setSelection, bumpRefresh } = useAppState();
+    const { selection, setSelection, bumpRefresh, analysisId } = useAppState();
     const confirm = useConfirm();
     const [loaded, setLoaded] = useState(null);
     const [title, setTitle] = useState('');
@@ -129,9 +130,12 @@ export function DocumentPane() {
             alert(err instanceof Error ? err.message : 'Could not delete');
         }
     }
+    if (analysisId) {
+        return <AnalysisPane />;
+    }
     if (selection.type === 'empty') {
         return (<div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Select a document from the sidebar.
+        Select a document or analysis from the sidebar.
       </div>);
     }
     if (!loaded || loaded.key !== key) {

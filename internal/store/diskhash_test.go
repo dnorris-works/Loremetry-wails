@@ -9,7 +9,7 @@ import (
 func TestSyncDiskHashesDetectsMove(t *testing.T) {
 	s := testStore(t)
 	root := t.TempDir()
-	old := filepath.Join(root, "01_Manuscript", "00_Current-Draft")
+	old := filepath.Join(root, "01_Manuscript", "01_Chapters")
 	next := filepath.Join(root, "01_Manuscript", "Chapters")
 	if err := os.MkdirAll(old, 0o755); err != nil {
 		t.Fatal(err)

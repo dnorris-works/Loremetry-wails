@@ -178,8 +178,8 @@ var seriesHeaderDirs = map[string]string{
 }
 
 var storyHeaderDirs = map[string]string{
-	"chapter":   "01_Manuscript/00_Current-Draft",
-	"act":       "01_Manuscript/00_Current-Draft",
+	"chapter":   "01_Manuscript/01_Chapters",
+	"act":       "01_Manuscript/01_Chapters",
 	"character": "02_Story-Elements/Characters",
 	"location":  "02_Story-Elements/Locations",
 	"research":  "04_Research",
