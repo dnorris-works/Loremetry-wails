@@ -7,7 +7,6 @@ import { Pencil, Plus, Settings, Database, Moon, Sun, Trash2 } from 'lucide-reac
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
-import { folderHeader } from '@/lib/folder-label';
 
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
@@ -121,15 +120,16 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
 }
 
 function FolderNode({ node }) {
-    const { setSelection, bumpRefresh } = useAppState();
+    const { setSelection, bumpRefresh, openFolders, toggleFolder, ensureFolder } = useAppState();
     const confirm = useConfirm();
     const files = node.files || [];
     const folders = node.folders || [];
+    const hasKids = files.length > 0 || folders.length > 0;
+    const open = openFolders.includes(node.path);
     async function addDoc() {
-        const existing = files.map((f) => f.name.replace(/\.[^.]+$/, ''));
-        const name = nextName(existing, 'Document');
-        const created = await api.createDiskFile(node.path, name, '');
+        const created = await api.createDiskFile(node.path, '', '');
         bumpRefresh();
+        await ensureFolder(node.path);
         setSelection({ type: 'file', dir: node.path, name: created.name });
     }
     async function dropFiles(list) {
@@ -143,6 +143,7 @@ function FolderNode({ node }) {
         if (!last)
             return;
         bumpRefresh();
+        await ensureFolder(node.path);
         setSelection({ type: 'file', dir: node.path, name: last.name });
     }
     return (<div className="rounded [--wails-drop-target:drop]" data-folder-path={node.path} onDragOver={(e) => {
@@ -155,14 +156,14 @@ function FolderNode({ node }) {
             }
         }}>
       <div className="flex h-5 items-center">
-        <span className="min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight text-foreground">
-          {folderHeader('', node.name, files.length)}
-        </span>
+        <button type="button" className="min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight text-foreground hover:bg-accent" onClick={() => hasKids && toggleFolder(node.path)}>
+          {node.label || `${node.name} (${files.length})`}
+        </button>
         <Button size="icon" variant="ghost" className="h-5 w-5" title="Add document" onClick={() => void addDoc()}>
           <Plus className="h-3 w-3"/>
         </Button>
       </div>
-      {(files.length > 0 || folders.length > 0) && (<div className={nest}>
+      {open && hasKids && (<div className={nest}>
         {files.map((f) => (<FileRow key={f.path} dir={node.path} file={f} onDelete={async () => {
                 if (!(await confirm('Delete this file?')))
                     return;
@@ -188,14 +189,4 @@ function FileRow({ dir, file, onDelete }) {
           <Trash2 className="pointer-events-none h-3 w-3"/>
         </Button>)}
     </div>);
-}
-
-function nextName(existing, base) {
-    const names = new Set(existing);
-    if (!names.has(base))
-        return base;
-    let n = 2;
-    while (names.has(`${base} ${n}`))
-        n += 1;
-    return `${base} ${n}`;
 }

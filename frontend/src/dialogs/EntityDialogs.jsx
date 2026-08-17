@@ -4,17 +4,19 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { useConfirm } from '@/components/confirm-dialog';
-import { PenPick, lastPen, rememberPen } from '@/lib/PenPick';
+import { PenPick } from '@/lib/PenPick';
+import { useAppState } from '@/lib/app-state';
 export function SeriesDialog({ open, onOpenChange, projectPath, projectName, defaultPen, defaultPenPath, onSaved, }) {
     const confirm = useConfirm();
+    const { lastPen, setLastPen } = useAppState();
     const [name, setName] = useState('');
     const [pen, setPen] = useState('');
     useEffect(() => {
         if (!open)
             return;
         setName(projectName || '');
-        setPen(defaultPen || lastPen());
-    }, [open, projectPath, projectName, defaultPen]);
+        setPen(defaultPen || lastPen);
+    }, [open, projectPath, projectName, defaultPen, lastPen]);
     async function save() {
         if (!name.trim())
             return;
@@ -24,7 +26,7 @@ export function SeriesDialog({ open, onOpenChange, projectPath, projectName, def
         else {
             if (!pen)
                 return;
-            rememberPen(pen);
+            await setLastPen(pen);
             const penPath = pen === defaultPen ? defaultPenPath : '';
             await api.createWritingSeries({ name: name.trim(), pen_name: pen, pen_path: penPath });
         }
@@ -59,6 +61,7 @@ export function SeriesDialog({ open, onOpenChange, projectPath, projectName, def
 }
 export function StoryDialog({ open, onOpenChange, projectPath, projectName, defaultSeriesPath, defaultPen, defaultPenPath, onSaved, }) {
     const confirm = useConfirm();
+    const { lastPen, setLastPen } = useAppState();
     const [name, setName] = useState('');
     const [seriesPath, setSeriesPath] = useState('');
     const [tree, setTree] = useState({ pens: [] });
@@ -69,8 +72,8 @@ export function StoryDialog({ open, onOpenChange, projectPath, projectName, defa
         void api.listWritingTree().then(setTree);
         setName(projectName || '');
         setSeriesPath(defaultSeriesPath || '');
-        setPen(defaultPen || lastPen());
-    }, [open, projectPath, projectName, defaultSeriesPath, defaultPen]);
+        setPen(defaultPen || lastPen);
+    }, [open, projectPath, projectName, defaultSeriesPath, defaultPen, lastPen]);
     const seriesOptions = (tree.pens || []).flatMap((p) => (p.series || []).map((s) => ({ path: s.path, name: `${p.name} / ${s.name}`, pen: p.name })));
     async function save() {
         if (!name.trim())
@@ -85,7 +88,7 @@ export function StoryDialog({ open, onOpenChange, projectPath, projectName, defa
         const penName = chosen?.pen || pen;
         if (!seriesPath && !penName)
             return;
-        rememberPen(penName);
+        await setLastPen(penName);
         const penPath = !seriesPath && penName === defaultPen ? defaultPenPath : '';
         const created = await api.createWritingBook({ name: name.trim(), pen_name: penName, pen_path: penPath, series_path: seriesPath });
         onSaved({ path: created.path, seriesPath });

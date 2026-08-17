@@ -2,19 +2,10 @@ import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
-
-const LAST_PEN = 'loremetry_last_pen';
-
-export function lastPen() {
-    return localStorage.getItem(LAST_PEN) || '';
-}
-
-export function rememberPen(name) {
-    if (name)
-        localStorage.setItem(LAST_PEN, name);
-}
+import { useAppState } from '@/lib/app-state';
 
 export function PenPick({ value, onChange, disabled }) {
+    const { setLastPen } = useAppState();
     const [pens, setPens] = useState([]);
     const [adding, setAdding] = useState(false);
     const [newName, setNewName] = useState('');
@@ -33,7 +24,7 @@ export function PenPick({ value, onChange, disabled }) {
                 return [...list, pen].sort((a, b) => a.name.localeCompare(b.name));
             });
             onChange(pen.name);
-            rememberPen(pen.name);
+            void setLastPen(pen.name);
             setNewName('');
             setAdding(false);
         }
@@ -46,7 +37,7 @@ export function PenPick({ value, onChange, disabled }) {
       <div className="flex gap-2">
         <select className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm" value={value} disabled={disabled} onChange={(e) => {
             onChange(e.target.value);
-            rememberPen(e.target.value);
+            void setLastPen(e.target.value);
         }}>
           <option value="">Choose…</option>
           {pens.map((p) => (<option key={p.name} value={p.name}>{p.name}</option>))}

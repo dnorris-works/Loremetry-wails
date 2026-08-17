@@ -7,7 +7,7 @@ import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated } from '@/auth/session';
 export function SettingsDialog({ open, onOpenChange }) {
     const [theme, setTheme] = useState(readTheme());
-    const { restoreOpen, setRestoreOpen } = useAppState();
+    const { restoreOpen, setRestoreOpen, bumpRefresh } = useAppState();
     const [writingRoot, setWritingRoot] = useState('');
     useEffect(() => {
         if (!open)
@@ -21,6 +21,7 @@ export function SettingsDialog({ open, onOpenChange }) {
                 return;
             await api.putSetting('writing_root', path);
             setWritingRoot(path);
+            bumpRefresh();
         }
         catch (err) {
             alert(err instanceof Error ? err.message : 'Could not set writing folder');

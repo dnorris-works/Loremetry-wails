@@ -329,6 +329,96 @@ export namespace store {
 	        this.deleted = source["deleted"];
 	    }
 	}
+	export class DirFile {
+	    name: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DirFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	    }
+	}
+	export class DirNode {
+	    name: string;
+	    path: string;
+	    label: string;
+	    count: number;
+	    files: DirFile[];
+	    folders: DirNode[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DirNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.label = source["label"];
+	        this.count = source["count"];
+	        this.files = this.convertValues(source["files"], DirFile);
+	        this.folders = this.convertValues(source["folders"], DirNode);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class DiskFile {
+	    dir: string;
+	    name: string;
+	    path: string;
+	    text?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiskFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.text = source["text"];
+	    }
+	}
+	export class DiskFileWrite {
+	    dir: string;
+	    name: string;
+	    new_name: string;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiskFileWrite(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.new_name = source["new_name"];
+	        this.text = source["text"];
+	    }
+	}
 	export class DocInput {
 	    kind: string;
 	    file_name: string;
@@ -793,92 +883,6 @@ export namespace store {
 	        this.pen_name = source["pen_name"];
 	    }
 	}
-	export class DirFile {
-	    name: string;
-	    path: string;
-
-	    static createFrom(source: any = {}) {
-	        return new DirFile(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.path = source["path"];
-	    }
-	}
-	export class DirNode {
-	    name: string;
-	    path: string;
-	    files: DirFile[];
-	    folders: DirNode[];
-
-	    static createFrom(source: any = {}) {
-	        return new DirNode(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.path = source["path"];
-	        this.files = this.convertValues(source["files"], DirFile);
-	        this.folders = this.convertValues(source["folders"], DirNode);
-	    }
-
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class DiskFileWrite {
-	    dir: string;
-	    name: string;
-	    new_name: string;
-	    text: string;
-
-	    static createFrom(source: any = {}) {
-	        return new DiskFileWrite(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.dir = source["dir"];
-	        this.name = source["name"];
-	        this.new_name = source["new_name"];
-	        this.text = source["text"];
-	    }
-	}
-	export class DiskFile {
-	    dir: string;
-	    name: string;
-	    path: string;
-	    text?: string;
-
-	    static createFrom(source: any = {}) {
-	        return new DiskFile(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.dir = source["dir"];
-	        this.name = source["name"];
-	        this.path = source["path"];
-	        this.text = source["text"];
-	    }
-	}
 	export class TreeBook {
 	    path: string;
 	    name: string;
@@ -896,7 +900,7 @@ export namespace store {
 	        this.folder = source["folder"];
 	        this.tree = this.convertValues(source["tree"], DirNode);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -1007,6 +1011,62 @@ export namespace store {
 	}
 	
 	
+	export class UIFileSelection {
+	    type: string;
+	    dir: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UIFileSelection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	    }
+	}
+	export class UISession {
+	    selection: UIFileSelection;
+	    open_series: string[];
+	    open_stories: string[];
+	    open_folders: string[];
+	    restore_open: boolean;
+	    last_pen: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UISession(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.selection = this.convertValues(source["selection"], UIFileSelection);
+	        this.open_series = source["open_series"];
+	        this.open_stories = source["open_stories"];
+	        this.open_folders = source["open_folders"];
+	        this.restore_open = source["restore_open"];
+	        this.last_pen = source["last_pen"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UpdatedResult {
 	    updated: boolean;
 	

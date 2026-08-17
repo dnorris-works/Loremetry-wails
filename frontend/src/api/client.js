@@ -1,5 +1,15 @@
 import {
   GetSession,
+  GetUISession,
+  SetUISelection,
+  ToggleOpenSeries,
+  ToggleOpenStory,
+  ToggleOpenFolder,
+  EnsureOpenSeries,
+  EnsureOpenStory,
+  EnsureOpenFolder,
+  SetRestoreOpen,
+  SetLastPen,
   ListWritingTree,
   CreateWritingSeries,
   CreateWritingBook,
@@ -24,6 +34,16 @@ import {
 } from '../../wailsjs/go/main/App'
 export const api = {
     getSession: () => GetSession(),
+    getUISession: () => GetUISession(),
+    setUISelection: (dir, name) => SetUISelection(dir ?? '', name ?? ''),
+    toggleOpenSeries: (path) => ToggleOpenSeries(path),
+    toggleOpenStory: (path) => ToggleOpenStory(path),
+    toggleOpenFolder: (path) => ToggleOpenFolder(path),
+    ensureOpenSeries: (path) => EnsureOpenSeries(path),
+    ensureOpenStory: (path) => EnsureOpenStory(path),
+    ensureOpenFolder: (path) => EnsureOpenFolder(path),
+    setRestoreOpen: (on) => SetRestoreOpen(!!on),
+    setLastPen: (name) => SetLastPen(name ?? ''),
     listWritingTree: () => ListWritingTree(),
     createWritingSeries: (data) => CreateWritingSeries({
         pen_name: data.pen_name ?? '',

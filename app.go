@@ -86,6 +86,86 @@ func (a *App) GetSession() (store.AuthSession, error) {
 	return s.Session()
 }
 
+func (a *App) GetUISession() (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.GetUISession()
+}
+
+func (a *App) SetUISelection(dir string, name string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.SetUISelection(dir, name)
+}
+
+func (a *App) ToggleOpenSeries(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.ToggleOpenSeries(path)
+}
+
+func (a *App) ToggleOpenStory(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.ToggleOpenStory(path)
+}
+
+func (a *App) EnsureOpenSeries(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.EnsureOpenSeries(path)
+}
+
+func (a *App) EnsureOpenStory(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.EnsureOpenStory(path)
+}
+
+func (a *App) ToggleOpenFolder(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.ToggleOpenFolder(path)
+}
+
+func (a *App) EnsureOpenFolder(path string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.EnsureOpenFolder(path)
+}
+
+func (a *App) SetRestoreOpen(on bool) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.SetRestoreOpen(on)
+}
+
+func (a *App) SetLastPen(name string) (store.UISession, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.UISession{}, err
+	}
+	return s.SetLastPen(name)
+}
+
 func (a *App) ListSeries() ([]store.Series, error) {
 	s, err := a.ready()
 	if err != nil {
@@ -395,7 +475,11 @@ func (a *App) CreatePen(name string) (store.Pen, error) {
 	if err != nil {
 		return store.Pen{}, err
 	}
-	return store.Pen{Name: filepath.Base(path)}, nil
+	penName := filepath.Base(path)
+	if s, err := a.ready(); err == nil {
+		_, _ = s.SetLastPen(penName)
+	}
+	return store.Pen{Name: penName}, nil
 }
 
 func (a *App) penDir(penName string) (string, error) {
@@ -699,6 +783,7 @@ func (a *App) PutSetting(key string, value string) (store.SettingValue, error) {
 	out, err := s.PutSetting(key, value)
 	if err == nil && key == "writing_root" {
 		a.startFolderWatch()
+		a.emitFoldersChanged(value)
 	}
 	return out, err
 }

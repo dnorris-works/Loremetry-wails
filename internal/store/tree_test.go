@@ -46,6 +46,9 @@ func TestListWritingTree(t *testing.T) {
 	if len(p.Series[0].Tree.Folders) == 0 {
 		t.Fatal("expected series folder tree")
 	}
+	if p.Series[0].Tree.Folders[0].Label == "" {
+		t.Fatal("expected folder label with count")
+	}
 	if len(p.Books[0].Tree.Folders) == 0 {
 		t.Fatal("expected book folder tree")
 	}

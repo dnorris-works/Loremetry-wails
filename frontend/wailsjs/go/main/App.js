@@ -42,6 +42,10 @@ export function CreateCharacter(arg1) {
   return window['go']['main']['App']['CreateCharacter'](arg1);
 }
 
+export function CreateDiskFile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateDiskFile'](arg1, arg2, arg3);
+}
+
 export function CreateHeaderFile(arg1) {
   return window['go']['main']['App']['CreateHeaderFile'](arg1);
 }
@@ -74,10 +78,6 @@ export function CreateWritingSeries(arg1) {
   return window['go']['main']['App']['CreateWritingSeries'](arg1);
 }
 
-export function CreateDiskFile(arg1, arg2, arg3) {
-  return window['go']['main']['App']['CreateDiskFile'](arg1, arg2, arg3);
-}
-
 export function DeleteAct(arg1) {
   return window['go']['main']['App']['DeleteAct'](arg1);
 }
@@ -90,12 +90,12 @@ export function DeleteCharacter(arg1) {
   return window['go']['main']['App']['DeleteCharacter'](arg1);
 }
 
-export function DeleteHeaderFile(arg1) {
-  return window['go']['main']['App']['DeleteHeaderFile'](arg1);
-}
-
 export function DeleteDiskFile(arg1, arg2) {
   return window['go']['main']['App']['DeleteDiskFile'](arg1, arg2);
+}
+
+export function DeleteHeaderFile(arg1) {
+  return window['go']['main']['App']['DeleteHeaderFile'](arg1);
 }
 
 export function DeleteSeries(arg1) {
@@ -112,6 +112,18 @@ export function DeleteStory(arg1) {
 
 export function DeleteWritingProject(arg1) {
   return window['go']['main']['App']['DeleteWritingProject'](arg1);
+}
+
+export function EnsureOpenFolder(arg1) {
+  return window['go']['main']['App']['EnsureOpenFolder'](arg1);
+}
+
+export function EnsureOpenSeries(arg1) {
+  return window['go']['main']['App']['EnsureOpenSeries'](arg1);
+}
+
+export function EnsureOpenStory(arg1) {
+  return window['go']['main']['App']['EnsureOpenStory'](arg1);
 }
 
 export function GetAct(arg1) {
@@ -140,6 +152,10 @@ export function GetSession() {
 
 export function GetSetting(arg1) {
   return window['go']['main']['App']['GetSetting'](arg1);
+}
+
+export function GetUISession() {
+  return window['go']['main']['App']['GetUISession']();
 }
 
 export function ListActs(arg1) {
@@ -218,12 +234,12 @@ export function PutSetting(arg1, arg2) {
   return window['go']['main']['App']['PutSetting'](arg1, arg2);
 }
 
-export function ReadHeaderFile(arg1) {
-  return window['go']['main']['App']['ReadHeaderFile'](arg1);
-}
-
 export function ReadDiskFile(arg1, arg2) {
   return window['go']['main']['App']['ReadDiskFile'](arg1, arg2);
+}
+
+export function ReadHeaderFile(arg1) {
+  return window['go']['main']['App']['ReadHeaderFile'](arg1);
 }
 
 export function ReadImportFiles(arg1) {
@@ -254,8 +270,32 @@ export function SetHeaderOverride(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetHeaderOverride'](arg1, arg2, arg3);
 }
 
+export function SetLastPen(arg1) {
+  return window['go']['main']['App']['SetLastPen'](arg1);
+}
+
+export function SetRestoreOpen(arg1) {
+  return window['go']['main']['App']['SetRestoreOpen'](arg1);
+}
+
+export function SetUISelection(arg1, arg2) {
+  return window['go']['main']['App']['SetUISelection'](arg1, arg2);
+}
+
 export function SyncAllFolders() {
   return window['go']['main']['App']['SyncAllFolders']();
+}
+
+export function ToggleOpenFolder(arg1) {
+  return window['go']['main']['App']['ToggleOpenFolder'](arg1);
+}
+
+export function ToggleOpenSeries(arg1) {
+  return window['go']['main']['App']['ToggleOpenSeries'](arg1);
+}
+
+export function ToggleOpenStory(arg1) {
+  return window['go']['main']['App']['ToggleOpenStory'](arg1);
 }
 
 export function UpdateAct(arg1, arg2) {
@@ -286,10 +326,10 @@ export function UpdateStory(arg1, arg2) {
   return window['go']['main']['App']['UpdateStory'](arg1, arg2);
 }
 
-export function WriteHeaderFile(arg1) {
-  return window['go']['main']['App']['WriteHeaderFile'](arg1);
-}
-
 export function WriteDiskFile(arg1) {
   return window['go']['main']['App']['WriteDiskFile'](arg1);
+}
+
+export function WriteHeaderFile(arg1) {
+  return window['go']['main']['App']['WriteHeaderFile'](arg1);
 }

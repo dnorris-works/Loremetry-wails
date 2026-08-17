@@ -1,118 +1,86 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '@/api/client';
-const RESTORE_KEY = 'restore_open_items';
-const SESSION_KEY = 'last_open_session';
+
+const emptySession = {
+    selection: { type: 'empty', dir: '', name: '' },
+    open_series: [],
+    open_stories: [],
+    open_folders: [],
+    restore_open: true,
+    last_pen: '',
+};
+
+function fromGo(sess) {
+    if (!sess)
+        return emptySession;
+    const sel = sess.selection || emptySession.selection;
+    return {
+        selection: {
+            type: sel.type || 'empty',
+            dir: sel.dir || '',
+            name: sel.name || '',
+        },
+        open_series: sess.open_series || sess.openSeries || [],
+        open_stories: sess.open_stories || sess.openStories || [],
+        open_folders: sess.open_folders || sess.openFolders || [],
+        restore_open: sess.restore_open ?? sess.restoreOpen ?? true,
+        last_pen: sess.last_pen || sess.lastPen || '',
+    };
+}
+
 const Ctx = createContext(null);
-function toggleId(ids, id) {
-    return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-}
-function addId(ids, id) {
-    return ids.includes(id) ? ids : [...ids, id];
-}
-async function readSetting(key) {
-    try {
-        const row = await api.getSetting(key);
-        return row.value;
-    }
-    catch {
-        return null;
-    }
-}
+
 export function AppStateProvider({ children }) {
-    const [selection, setSelection] = useState({ type: 'empty' });
-    const [openSeries, setOpenSeries] = useState([]);
-    const [openStories, setOpenStories] = useState([]);
-    const [openFolders, setOpenFolders] = useState([]);
-    const [restoreOpen, setRestoreOpenState] = useState(true);
+    const [session, setSession] = useState(emptySession);
     const [refreshKey, setRefreshKey] = useState(0);
-    const ready = useRef(false);
-    const snapshot = useRef({ selection, openSeries, openStories, openFolders, restoreOpen });
-    snapshot.current = { selection, openSeries, openStories, openFolders, restoreOpen };
-    async function saveSession() {
-        const s = snapshot.current;
-        if (!s.restoreOpen)
-            return;
-        await api.putSetting(SESSION_KEY, JSON.stringify({
-            selection: s.selection,
-            openSeries: s.openSeries,
-            openStories: s.openStories,
-            openFolders: s.openFolders,
-        }));
-    }
     useEffect(() => {
         let cancelled = false;
-        void (async () => {
-            const restoreVal = await readSetting(RESTORE_KEY);
-            const restore = restoreVal !== 'false';
+        void api.getUISession().then((sess) => {
             if (cancelled)
                 return;
-            setRestoreOpenState(restore);
-            if (restore) {
-                const raw = await readSetting(SESSION_KEY);
-                if (raw && !cancelled) {
-                    try {
-                        const saved = JSON.parse(raw);
-                        if (saved.selection && saved.selection.type === 'file')
-                            setSelection(saved.selection);
-                        setOpenSeries(Array.isArray(saved.openSeries) ? saved.openSeries : []);
-                        setOpenStories(Array.isArray(saved.openStories) ? saved.openStories : []);
-                        setOpenFolders(Array.isArray(saved.openFolders) ? saved.openFolders : []);
-                    }
-                    catch {
-                        /* ignore */
-                    }
-                }
+            const next = fromGo(sess);
+            if (next.restore_open === false) {
+                setSession({
+                    ...next,
+                    selection: emptySession.selection,
+                    open_series: [],
+                    open_stories: [],
+                    open_folders: [],
+                });
+                return;
             }
-            ready.current = true;
-        })();
+            setSession(next);
+        }).catch(() => { });
         return () => {
             cancelled = true;
         };
     }, []);
-    useEffect(() => {
-        if (!ready.current || !restoreOpen)
-            return;
-        const t = window.setTimeout(() => {
-            void saveSession();
-        }, 300);
-        return () => window.clearTimeout(t);
-    }, [selection, openSeries, openStories, openFolders, restoreOpen]);
-    useEffect(() => {
-        function flush() {
-            if (document.visibilityState === 'hidden')
-                void saveSession();
-        }
-        document.addEventListener('visibilitychange', flush);
-        window.addEventListener('beforeunload', flush);
-        return () => {
-            document.removeEventListener('visibilitychange', flush);
-            window.removeEventListener('beforeunload', flush);
-        };
-    }, []);
-    async function setRestoreOpen(v) {
-        setRestoreOpenState(v);
-        snapshot.current.restoreOpen = v;
-        await api.putSetting(RESTORE_KEY, v ? 'true' : 'false');
-        if (v)
-            await saveSession();
+    async function apply(next) {
+        setSession(fromGo(next));
+        return next;
     }
     const value = useMemo(() => ({
-        selection,
-        setSelection,
-        openSeries,
-        openStories,
-        toggleSeries: (id) => setOpenSeries((ids) => toggleId(ids, id)),
-        toggleStory: (id) => setOpenStories((ids) => toggleId(ids, id)),
-        ensureOpenSeries: (id) => setOpenSeries((ids) => addId(ids, id)),
-        ensureOpenStory: (id) => setOpenStories((ids) => addId(ids, id)),
-        folderOpen: (path) => openFolders.includes(path),
-        toggleFolder: (path) => setOpenFolders((ids) => toggleId(ids, path)),
-        ensureFolder: (path) => setOpenFolders((ids) => addId(ids, path)),
-        restoreOpen,
-        setRestoreOpen,
+        selection: session.selection || emptySession.selection,
+        openSeries: session.open_series || [],
+        openStories: session.open_stories || [],
+        openFolders: session.open_folders || [],
+        restoreOpen: session.restore_open !== false,
+        lastPen: session.last_pen || '',
+        setSelection: (sel) => {
+            const file = sel?.type === 'file';
+            return api.setUISelection(file ? sel.dir : '', file ? sel.name : '').then(apply);
+        },
+        toggleSeries: (path) => api.toggleOpenSeries(path).then(apply),
+        toggleStory: (path) => api.toggleOpenStory(path).then(apply),
+        ensureOpenSeries: (path) => api.ensureOpenSeries(path).then(apply),
+        ensureOpenStory: (path) => api.ensureOpenStory(path).then(apply),
+        toggleFolder: (path) => api.toggleOpenFolder(path).then(apply),
+        ensureFolder: (path) => api.ensureOpenFolder(path).then(apply),
+        setRestoreOpen: (on) => api.setRestoreOpen(on).then(apply),
+        setLastPen: (name) => api.setLastPen(name).then(apply),
         refreshKey,
         bumpRefresh: () => setRefreshKey((n) => n + 1),
-    }), [selection, openSeries, openStories, openFolders, restoreOpen, refreshKey]);
+    }), [session, refreshKey]);
     return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function useAppState() {

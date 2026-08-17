@@ -23,6 +23,8 @@ export function CreateChapter(arg1:number,arg2:store.ChapterInput):Promise<store
 
 export function CreateCharacter(arg1:store.CharacterInput):Promise<store.IDResult>;
 
+export function CreateDiskFile(arg1:string,arg2:string,arg3:string):Promise<store.DiskFile>;
+
 export function CreateHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;
 
 export function CreatePen(arg1:string):Promise<store.Pen>;
@@ -39,17 +41,15 @@ export function CreateWritingBook(arg1:store.WritingProjectInput):Promise<store.
 
 export function CreateWritingSeries(arg1:store.WritingProjectInput):Promise<store.PathResult>;
 
-export function CreateDiskFile(arg1:string,arg2:string,arg3:string):Promise<store.DiskFile>;
-
 export function DeleteAct(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteChapter(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteCharacter(arg1:number):Promise<store.DeletedResult>;
 
-export function DeleteHeaderFile(arg1:store.HeaderFileRef):Promise<store.DeletedResult>;
-
 export function DeleteDiskFile(arg1:string,arg2:string):Promise<store.DeletedResult>;
+
+export function DeleteHeaderFile(arg1:store.HeaderFileRef):Promise<store.DeletedResult>;
 
 export function DeleteSeries(arg1:number):Promise<store.DeletedResult>;
 
@@ -58,6 +58,12 @@ export function DeleteSeriesDoc(arg1:number):Promise<store.DeletedResult>;
 export function DeleteStory(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteWritingProject(arg1:string):Promise<store.DeletedResult>;
+
+export function EnsureOpenFolder(arg1:string):Promise<store.UISession>;
+
+export function EnsureOpenSeries(arg1:string):Promise<store.UISession>;
+
+export function EnsureOpenStory(arg1:string):Promise<store.UISession>;
 
 export function GetAct(arg1:number):Promise<store.StoryAct>;
 
@@ -72,6 +78,8 @@ export function GetSeriesDoc(arg1:number):Promise<store.BibleDoc>;
 export function GetSession():Promise<store.AuthSession>;
 
 export function GetSetting(arg1:string):Promise<store.SettingValue>;
+
+export function GetUISession():Promise<store.UISession>;
 
 export function ListActs(arg1:number):Promise<Array<store.StoryAct>>;
 
@@ -111,9 +119,9 @@ export function PlaceStoryDoc(arg1:number,arg2:store.PlaceInput):Promise<store.U
 
 export function PutSetting(arg1:string,arg2:string):Promise<store.SettingValue>;
 
-export function ReadHeaderFile(arg1:store.HeaderFileRef):Promise<store.HeaderFileContent>;
-
 export function ReadDiskFile(arg1:string,arg2:string):Promise<store.DiskFile>;
+
+export function ReadHeaderFile(arg1:store.HeaderFileRef):Promise<store.HeaderFileContent>;
 
 export function ReadImportFiles(arg1:Array<string>):Promise<Array<main.ImportedFile>>;
 
@@ -129,7 +137,19 @@ export function SetFolderLink(arg1:store.FolderLinkInput):Promise<store.FolderLi
 
 export function SetHeaderOverride(arg1:string,arg2:string,arg3:string):Promise<store.FolderLink>;
 
+export function SetLastPen(arg1:string):Promise<store.UISession>;
+
+export function SetRestoreOpen(arg1:boolean):Promise<store.UISession>;
+
+export function SetUISelection(arg1:string,arg2:string):Promise<store.UISession>;
+
 export function SyncAllFolders():Promise<Array<store.FolderChange>>;
+
+export function ToggleOpenFolder(arg1:string):Promise<store.UISession>;
+
+export function ToggleOpenSeries(arg1:string):Promise<store.UISession>;
+
+export function ToggleOpenStory(arg1:string):Promise<store.UISession>;
 
 export function UpdateAct(arg1:number,arg2:store.ActInput):Promise<store.UpdatedResult>;
 
@@ -145,6 +165,6 @@ export function UpdateSeriesDoc(arg1:number,arg2:store.SeriesDocInput):Promise<s
 
 export function UpdateStory(arg1:number,arg2:store.StoryInput):Promise<store.UpdatedResult>;
 
-export function WriteHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;
-
 export function WriteDiskFile(arg1:store.DiskFileWrite):Promise<store.DiskFile>;
+
+export function WriteHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;

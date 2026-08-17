@@ -72,6 +72,14 @@ func CreateDiskFile(dir, name, text string) (DiskFile, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return DiskFile{}, err
 	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		if shouldRenumberDir(dir) {
+			name = "Chapter"
+		} else {
+			name = nextDocTitle(dir)
+		}
+	}
 	fileName := mdName(name)
 	if shouldRenumberDir(dir) {
 		files, _ := listTextFileMeta(dir)
@@ -132,6 +140,28 @@ func shouldRenumberDir(dir string) bool {
 func findNameAfterRenumber(dir, title string) string {
 	rel := findRelAfterRenumber(dir, title, title)
 	return filepath.Base(rel)
+}
+
+func nextDocTitle(dir string) string {
+	used := map[string]bool{}
+	entries, err := os.ReadDir(dir)
+	if err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !textExt(e.Name()) {
+				continue
+			}
+			stem := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
+			used[strings.ToLower(stem)] = true
+		}
+	}
+	if !used["document"] {
+		return "Document"
+	}
+	for n := 2; ; n++ {
+		if !used[fmt.Sprintf("document %d", n)] {
+			return fmt.Sprintf("Document %d", n)
+		}
+	}
 }
 
 func diskFilePath(dir, name string) (string, error) {

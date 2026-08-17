@@ -24,6 +24,8 @@ type DirFile struct {
 type DirNode struct {
 	Name    string    `json:"name"`
 	Path    string    `json:"path"`
+	Label   string    `json:"label"`
+	Count   int       `json:"count"`
 	Files   []DirFile `json:"files"`
 	Folders []DirNode `json:"folders"`
 }
@@ -188,6 +190,8 @@ func scanDirNode(path string) DirNode {
 	sort.Slice(node.Files, func(i, j int) bool {
 		return strings.ToLower(node.Files[i].Name) < strings.ToLower(node.Files[j].Name)
 	})
+	node.Count = len(node.Files)
+	node.Label = fmt.Sprintf("%s (%d)", node.Name, node.Count)
 	return node
 }
 
