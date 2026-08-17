@@ -11,7 +11,7 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
-    const { setSelection, refreshKey, bumpRefresh, openSeries, openStories, toggleSeries, toggleStory } = useAppState();
+    const { setSelection, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
     const [theme, setTheme] = useState(readTheme());
@@ -30,6 +30,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         setTheme(next);
         await persistTheme(next, isAuthenticated());
     }
+    const [tab, setTab] = useState('authors');
     const pens = tree.pens || [];
     return (<div className="flex h-full flex-col bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -46,21 +47,38 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
           </Button>
         </div>
       </div>
+      <div className="flex border-b border-border">
+        <button type="button" className={`flex-1 px-3 py-1.5 text-xs font-medium ${tab === 'authors' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('authors')}>
+          Authors
+        </button>
+        <button type="button" className={`flex-1 px-3 py-1.5 text-xs font-medium ${tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('reports')}>
+          Reports
+        </button>
+      </div>
       <div className="flex-1 overflow-auto p-2">
+        {tab === 'reports' ? (<p className="px-1 text-xs text-muted-foreground">No reports yet.</p>) : (<>
         {(tree.problems || []).map((p) => (<p key={p.path || p.message} className="mb-2 px-1 text-[11px] text-destructive">{p.message}</p>))}
-        {pens.map((pen) => (<div key={pen.path} className="mb-2">
+        {pens.map((pen) => {
+          const penOpen = !openFolders.includes(pen.path);
+          const seriesOpen = !openFolders.includes(pen.path + '|series');
+          const storiesOpen = !openFolders.includes(pen.path + '|stories');
+          return (<div key={pen.path} className="mb-2">
             <div className="px-1 leading-tight">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">{pen.name}</span>
+              <button type="button" className="w-full truncate text-left text-xs font-semibold uppercase text-muted-foreground hover:bg-accent" onClick={() => toggleFolder(pen.path)}>
+                {pen.name}
+              </button>
             </div>
             {(pen.problems || []).map((p) => (<p key={p.path || p.message} className="px-1 text-[11px] leading-tight text-destructive">{p.message}</p>))}
-            <div className={nest}>
+            {penOpen && <div className={nest}>
               <div className="flex h-5 items-center justify-between">
-                <span className="text-[10px] uppercase leading-none text-muted-foreground">Series</span>
+                <button type="button" className="min-w-0 flex-1 truncate text-left text-[10px] uppercase leading-none text-muted-foreground hover:bg-accent" onClick={() => toggleFolder(pen.path + '|series')}>
+                  Series
+                </button>
                 <Button size="icon" variant="ghost" className="h-5 w-5" title="New series" onClick={() => onNewSeries(pen.name, pen.path)}>
                   <Plus className="h-3 w-3"/>
                 </Button>
               </div>
-              {(pen.series || []).map((s) => (<div key={s.path}>
+              {seriesOpen && (pen.series || []).map((s) => (<div key={s.path}>
                   <div className="flex h-6 items-center">
                     <button type="button" className="flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight text-teal-700 hover:bg-accent dark:text-teal-400" onClick={() => toggleSeries(s.path)}>
                       {s.name}
@@ -84,12 +102,14 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                     </div>)}
                 </div>))}
               <div className="flex h-5 items-center justify-between">
-                <span className="text-[10px] uppercase leading-none text-muted-foreground">Stories</span>
+                <button type="button" className="min-w-0 flex-1 truncate text-left text-[10px] uppercase leading-none text-muted-foreground hover:bg-accent" onClick={() => toggleFolder(pen.path + '|stories')}>
+                  Stories
+                </button>
                 <Button size="icon" variant="ghost" className="h-5 w-5" title="New story" onClick={() => onNewStory('', pen.name, pen.path)}>
                   <Plus className="h-3 w-3"/>
                 </Button>
               </div>
-              {(pen.books || []).map((st) => (<div key={st.path}>
+              {storiesOpen && (pen.books || []).map((st) => (<div key={st.path}>
                   <div className="flex h-6 items-center">
                     <button type="button" className="flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight text-blue-800 hover:bg-accent dark:text-blue-300" onClick={() => toggleStory(st.path)}>
                       {st.name}
@@ -108,8 +128,10 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                       }}/>))}
                     </div>)}
                 </div>))}
-            </div>
-          </div>))}
+            </div>}
+          </div>);
+        })}
+        </>)}
       </div>
       <div className="border-t border-border p-2">
         <Button variant="ghost" size="sm" className="w-full" onClick={() => signOut()}>
@@ -161,7 +183,7 @@ function FolderNode({ node, projectPath }) {
             }
         }}>
       <div className="flex h-5 items-center">
-        <button type="button" className={`min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight hover:bg-accent ${node.hidden ? 'text-muted-foreground/70' : 'text-foreground'}`} onClick={() => hasKids && toggleFolder(node.path)}>
+        <button type="button" className={`min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight hover:bg-accent ${node.hidden ? 'text-muted-foreground/70' : 'text-foreground'}`} onClick={() => toggleFolder(node.path)}>
           {node.label || `${node.name} (${node.count ?? files.length})`}
         </button>
         <Button size="icon" variant="ghost" className="h-5 w-5" title={node.hidden ? 'Show in this story' : 'Hide in this story'} onClick={() => void setHidden(!node.hidden)}>
