@@ -71,6 +71,8 @@ export function GetChapter(arg1:number):Promise<store.Chapter>;
 
 export function GetCharacter(arg1:number):Promise<store.CharacterProfile>;
 
+export function GetFolderVisibility():Promise<store.FolderVisibility>;
+
 export function GetSeriesBible(arg1:number):Promise<store.BibleDoc>;
 
 export function GetSeriesDoc(arg1:number):Promise<store.BibleDoc>;
@@ -107,6 +109,8 @@ export function ListStories(arg1:number):Promise<Array<store.Story>>;
 
 export function ListStoryDocs(arg1:number):Promise<Array<store.StoryDoc>>;
 
+export function ListTemplateFolders():Promise<store.TemplateFolderLists>;
+
 export function ListWritingTree():Promise<store.WritingTree>;
 
 export function PickImportFolder():Promise<string>;
@@ -135,11 +139,17 @@ export function ReorderStories(arg1:number,arg2:store.IDList):Promise<store.Upda
 
 export function SetFolderLink(arg1:store.FolderLinkInput):Promise<store.FolderLink>;
 
+export function SetFolderOverride(arg1:store.FolderOverrideInput):Promise<store.FolderVisibility>;
+
 export function SetHeaderOverride(arg1:string,arg2:string,arg3:string):Promise<store.FolderLink>;
+
+export function SetHiddenFolderNames(arg1:store.NameList):Promise<store.FolderVisibility>;
 
 export function SetLastPen(arg1:string):Promise<store.UISession>;
 
 export function SetRestoreOpen(arg1:boolean):Promise<store.UISession>;
+
+export function SetShowHiddenFolders(arg1:boolean):Promise<store.FolderVisibility>;
 
 export function SetUISelection(arg1:string,arg2:string):Promise<store.UISession>;
 

@@ -312,7 +312,52 @@ func (a *App) ListWritingTree() (store.WritingTree, error) {
 	if err != nil {
 		return store.ListWritingTree(""), nil
 	}
-	return store.ListWritingTree(root), nil
+	tree := store.ListWritingTree(root)
+	s, storeErr := a.ready()
+	if storeErr != nil {
+		return tree, nil
+	}
+	vis, visErr := s.GetFolderVisibility()
+	if visErr != nil {
+		return tree, nil
+	}
+	return store.FilterWritingTree(tree, vis), nil
+}
+
+func (a *App) GetFolderVisibility() (store.FolderVisibility, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderVisibility{}, err
+	}
+	return s.GetFolderVisibility()
+}
+
+func (a *App) ListTemplateFolders() (store.TemplateFolderLists, error) {
+	return store.TemplateFolderNames(), nil
+}
+
+func (a *App) SetHiddenFolderNames(in store.NameList) (store.FolderVisibility, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderVisibility{}, err
+	}
+	return s.SetHiddenFolderNames(in.Names)
+}
+
+func (a *App) SetShowHiddenFolders(on bool) (store.FolderVisibility, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderVisibility{}, err
+	}
+	return s.SetShowHiddenFolders(on)
+}
+
+func (a *App) SetFolderOverride(in store.FolderOverrideInput) (store.FolderVisibility, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.FolderVisibility{}, err
+	}
+	return s.SetFolderOverride(in)
 }
 
 func (a *App) CreateWritingSeries(in store.WritingProjectInput) (store.PathResult, error) {

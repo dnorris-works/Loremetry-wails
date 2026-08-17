@@ -348,6 +348,7 @@ export namespace store {
 	    path: string;
 	    label: string;
 	    count: number;
+	    hidden: boolean;
 	    files: DirFile[];
 	    folders: DirNode[];
 	
@@ -361,6 +362,7 @@ export namespace store {
 	        this.path = source["path"];
 	        this.label = source["label"];
 	        this.count = source["count"];
+	        this.hidden = source["hidden"];
 	        this.files = this.convertValues(source["files"], DirFile);
 	        this.folders = this.convertValues(source["folders"], DirNode);
 	    }
@@ -511,6 +513,38 @@ export namespace store {
 	        this.path = source["path"];
 	    }
 	}
+	export class FolderOverrideInput {
+	    project_path: string;
+	    key: string;
+	    mode: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FolderOverrideInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.project_path = source["project_path"];
+	        this.key = source["key"];
+	        this.mode = source["mode"];
+	    }
+	}
+	export class FolderVisibility {
+	    hidden_names: string[];
+	    show_hidden: boolean;
+	    overrides: Record<string, any>;
+	
+	    static createFrom(source: any = {}) {
+	        return new FolderVisibility(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hidden_names = source["hidden_names"];
+	        this.show_hidden = source["show_hidden"];
+	        this.overrides = source["overrides"];
+	    }
+	}
 	export class HeaderFile {
 	    rel: string;
 	    name: string;
@@ -657,6 +691,18 @@ export namespace store {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	    }
+	}
+	export class NameList {
+	    names: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new NameList(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.names = source["names"];
 	    }
 	}
 	export class PathResult {
@@ -881,6 +927,20 @@ export namespace store {
 	        this.description = source["description"];
 	        this.series_id = source["series_id"];
 	        this.pen_name = source["pen_name"];
+	    }
+	}
+	export class TemplateFolderLists {
+	    series: string[];
+	    books: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateFolderLists(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.series = source["series"];
+	        this.books = source["books"];
 	    }
 	}
 	export class TreeBook {

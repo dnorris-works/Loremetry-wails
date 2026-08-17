@@ -138,6 +138,10 @@ export function GetCharacter(arg1) {
   return window['go']['main']['App']['GetCharacter'](arg1);
 }
 
+export function GetFolderVisibility() {
+  return window['go']['main']['App']['GetFolderVisibility']();
+}
+
 export function GetSeriesBible(arg1) {
   return window['go']['main']['App']['GetSeriesBible'](arg1);
 }
@@ -210,6 +214,10 @@ export function ListStoryDocs(arg1) {
   return window['go']['main']['App']['ListStoryDocs'](arg1);
 }
 
+export function ListTemplateFolders() {
+  return window['go']['main']['App']['ListTemplateFolders']();
+}
+
 export function ListWritingTree() {
   return window['go']['main']['App']['ListWritingTree']();
 }
@@ -266,8 +274,16 @@ export function SetFolderLink(arg1) {
   return window['go']['main']['App']['SetFolderLink'](arg1);
 }
 
+export function SetFolderOverride(arg1) {
+  return window['go']['main']['App']['SetFolderOverride'](arg1);
+}
+
 export function SetHeaderOverride(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetHeaderOverride'](arg1, arg2, arg3);
+}
+
+export function SetHiddenFolderNames(arg1) {
+  return window['go']['main']['App']['SetHiddenFolderNames'](arg1);
 }
 
 export function SetLastPen(arg1) {
@@ -276,6 +292,10 @@ export function SetLastPen(arg1) {
 
 export function SetRestoreOpen(arg1) {
   return window['go']['main']['App']['SetRestoreOpen'](arg1);
+}
+
+export function SetShowHiddenFolders(arg1) {
+  return window['go']['main']['App']['SetShowHiddenFolders'](arg1);
 }
 
 export function SetUISelection(arg1, arg2) {

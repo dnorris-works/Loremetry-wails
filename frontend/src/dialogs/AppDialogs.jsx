@@ -9,10 +9,18 @@ export function SettingsDialog({ open, onOpenChange }) {
     const [theme, setTheme] = useState(readTheme());
     const { restoreOpen, setRestoreOpen, bumpRefresh } = useAppState();
     const [writingRoot, setWritingRoot] = useState('');
+    const [templateFolders, setTemplateFolders] = useState({ series: [], books: [] });
+    const [hiddenNames, setHiddenNames] = useState([]);
+    const [showHidden, setShowHidden] = useState(false);
     useEffect(() => {
         if (!open)
             return;
         void api.getSetting('writing_root').then((s) => setWritingRoot(s.value || '')).catch(() => setWritingRoot(''));
+        void api.listTemplateFolders().then((d) => setTemplateFolders({ series: d.series || [], books: d.books || [] })).catch(() => { });
+        void api.getFolderVisibility().then((v) => {
+            setHiddenNames(v.hidden_names || v.hiddenNames || []);
+            setShowHidden(!!(v.show_hidden ?? v.showHidden));
+        }).catch(() => { });
     }, [open]);
     async function pickRoot() {
         try {
@@ -27,8 +35,19 @@ export function SettingsDialog({ open, onOpenChange }) {
             alert(err instanceof Error ? err.message : 'Could not set writing folder');
         }
     }
+    async function toggleName(name, visible) {
+        const next = visible ? hiddenNames.filter((n) => n !== name) : [...hiddenNames.filter((n) => n !== name), name];
+        setHiddenNames(next);
+        await api.setHiddenFolderNames(next);
+        bumpRefresh();
+    }
+    async function toggleShowHidden(on) {
+        setShowHidden(on);
+        await api.setShowHiddenFolders(on);
+        bumpRefresh();
+    }
     return (<Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogTitle>Settings</DialogTitle>
         <div className="mt-4 flex gap-2">
           <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => {
@@ -53,8 +72,26 @@ export function SettingsDialog({ open, onOpenChange }) {
           <p className="truncate text-xs text-muted-foreground" title={writingRoot}>{writingRoot || 'Not set — you will be asked when you create a series or story'}</p>
           <Button size="sm" variant="outline" onClick={() => void pickRoot()}>Choose folder</Button>
         </div>
+        <label className="mt-4 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={showHidden} onChange={(e) => void toggleShowHidden(e.target.checked)}/>
+          Show hidden folders in the sidebar
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">Folders still exist on disk. Unchecked names stay hidden everywhere unless you show them on a story.</p>
+        <FolderChecks title="Series folders" names={templateFolders.series} hiddenNames={hiddenNames} onToggle={toggleName}/>
+        <FolderChecks title="Story folders" names={templateFolders.books} hiddenNames={hiddenNames} onToggle={toggleName}/>
       </DialogContent>
     </Dialog>);
+}
+function FolderChecks({ title, names, hiddenNames, onToggle }) {
+    return (<div className="mt-4">
+      <div className="text-sm">{title}</div>
+      <div className="mt-1 max-h-40 space-y-1 overflow-auto text-sm">
+        {names.map((name) => (<label key={name} className="flex items-center gap-2">
+            <input type="checkbox" checked={!hiddenNames.includes(name)} onChange={(e) => void onToggle(name, e.target.checked)}/>
+            <span className="truncate">{name}</span>
+          </label>))}
+      </div>
+    </div>);
 }
 export function AdminDialog({ open, onOpenChange }) {
     const [tables, setTables] = useState([]);

@@ -3,7 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, Plus, Settings, Database, Moon, Sun, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Settings, Database, Moon, Sun, Trash2, Eye, EyeOff } from 'lucide-react';
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
@@ -74,7 +74,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                   </div>
                   {openSeries.includes(s.path) && (<div className={nest}>
                       {(s.problems || []).map((p) => (<p key={p.path || p.message} className="text-[11px] leading-tight text-destructive">{p.message}</p>))}
-                      {(s.tree?.folders || []).map((node) => (<FolderNode key={node.path} node={node}/>))}
+                      {(s.tree?.folders || []).map((node) => (<FolderNode key={node.path} node={node} projectPath={s.path}/>))}
                       {(s.tree?.files || []).map((f) => (<FileRow key={f.path} dir={s.path} file={f} onDelete={async () => {
                           if (!(await confirm('Delete this file?')))
                               return;
@@ -99,7 +99,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                     </Button>
                   </div>
                   {openStories.includes(st.path) && (<div className={nest}>
-                      {(st.tree?.folders || []).map((node) => (<FolderNode key={node.path} node={node}/>))}
+                      {(st.tree?.folders || []).map((node) => (<FolderNode key={node.path} node={node} projectPath={st.path}/>))}
                       {(st.tree?.files || []).map((f) => (<FileRow key={f.path} dir={st.path} file={f} onDelete={async () => {
                           if (!(await confirm('Delete this file?')))
                               return;
@@ -119,13 +119,14 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
     </div>);
 }
 
-function FolderNode({ node }) {
+function FolderNode({ node, projectPath }) {
     const { setSelection, bumpRefresh, openFolders, toggleFolder, ensureFolder } = useAppState();
     const confirm = useConfirm();
     const files = node.files || [];
     const folders = node.folders || [];
     const hasKids = files.length > 0 || folders.length > 0;
     const open = openFolders.includes(node.path);
+    const key = folderKey(projectPath, node.path, node.name);
     async function addDoc() {
         const created = await api.createDiskFile(node.path, '', '');
         bumpRefresh();
@@ -146,6 +147,10 @@ function FolderNode({ node }) {
         await ensureFolder(node.path);
         setSelection({ type: 'file', dir: node.path, name: last.name });
     }
+    async function setHidden(hide) {
+        await api.setFolderOverride(projectPath, key, hide ? 'hide' : 'show');
+        bumpRefresh();
+    }
     return (<div className="rounded [--wails-drop-target:drop]" data-folder-path={node.path} onDragOver={(e) => {
             if (e.dataTransfer.types.includes('Files'))
                 e.preventDefault();
@@ -156,9 +161,12 @@ function FolderNode({ node }) {
             }
         }}>
       <div className="flex h-5 items-center">
-        <button type="button" className="min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight text-foreground hover:bg-accent" onClick={() => hasKids && toggleFolder(node.path)}>
+        <button type="button" className={`min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight hover:bg-accent ${node.hidden ? 'text-muted-foreground/70' : 'text-foreground'}`} onClick={() => hasKids && toggleFolder(node.path)}>
           {node.label || `${node.name} (${files.length})`}
         </button>
+        <Button size="icon" variant="ghost" className="h-5 w-5" title={node.hidden ? 'Show in this story' : 'Hide in this story'} onClick={() => void setHidden(!node.hidden)}>
+          {node.hidden ? <Eye className="h-3 w-3"/> : <EyeOff className="h-3 w-3"/>}
+        </Button>
         <Button size="icon" variant="ghost" className="h-5 w-5" title="Add document" onClick={() => void addDoc()}>
           <Plus className="h-3 w-3"/>
         </Button>
@@ -170,9 +178,17 @@ function FolderNode({ node }) {
                 await api.deleteDiskFile(node.path, f.name);
                 bumpRefresh();
             }}/>))}
-        {folders.map((child) => (<FolderNode key={child.path} node={child}/>))}
+        {folders.map((child) => (<FolderNode key={child.path} node={child} projectPath={projectPath}/>))}
       </div>)}
     </div>);
+}
+
+function folderKey(projectPath, nodePath, name) {
+    const root = (projectPath || '').replace(/\\/g, '/');
+    const p = (nodePath || '').replace(/\\/g, '/');
+    if (root && p.startsWith(root + '/'))
+        return p.slice(root.length + 1);
+    return name;
 }
 
 function FileRow({ dir, file, onDelete }) {
