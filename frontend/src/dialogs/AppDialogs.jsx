@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated } from '@/auth/session';
+import { useConfirm } from '@/components/confirm-dialog';
 export function SettingsDialog({ open, onOpenChange }) {
     const [theme, setTheme] = useState(readTheme());
     const { restoreOpen, setRestoreOpen, bumpRefresh } = useAppState();
+    const confirm = useConfirm();
     const [writingRoot, setWritingRoot] = useState('');
     const [templateFolders, setTemplateFolders] = useState({ series: [], books: [] });
     const [hiddenNames, setHiddenNames] = useState([]);
     const [showHidden, setShowHidden] = useState(false);
+    const [draftSection, setDraftSection] = useState('Act');
     useEffect(() => {
         if (!open)
             return;
@@ -21,6 +24,7 @@ export function SettingsDialog({ open, onOpenChange }) {
             setHiddenNames(v.hidden_names || v.hiddenNames || []);
             setShowHidden(!!(v.show_hidden ?? v.showHidden));
         }).catch(() => { });
+        void api.getDraftSection().then((v) => setDraftSection(v === 'Part' ? 'Part' : 'Act')).catch(() => setDraftSection('Act'));
     }, [open]);
     async function pickRoot() {
         try {
@@ -46,10 +50,21 @@ export function SettingsDialog({ open, onOpenChange }) {
         await api.setShowHiddenFolders(on);
         bumpRefresh();
     }
+    async function chooseDraftSection(next) {
+        if (next === draftSection)
+            return;
+        const other = next === 'Act' ? 'Part' : 'Act';
+        const rename = await confirm(`Rename existing ${other} folders on disk to ${next}?`);
+        const out = await api.setDraftSection(next, rename);
+        setDraftSection(out.section || next);
+        bumpRefresh();
+    }
     return (<Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
-        <DialogTitle>Settings</DialogTitle>
-        <div className="mt-4 flex gap-2">
+      <DialogContent className="max-h-[80vh] overflow-y-auto" movable>
+        <DialogHeader>
+          <DialogTitle>Settings</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-2">
           <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => {
             setTheme('light');
             void persistTheme('light', isAuthenticated());
@@ -71,6 +86,14 @@ export function SettingsDialog({ open, onOpenChange }) {
           <div className="text-sm">Writing folder</div>
           <p className="truncate text-xs text-muted-foreground" title={writingRoot}>{writingRoot || 'Not set — you will be asked when you create a series or story'}</p>
           <Button size="sm" variant="outline" onClick={() => void pickRoot()}>Choose folder</Button>
+        </div>
+        <div className="mt-4 space-y-1">
+          <div className="text-sm">Use</div>
+          <div className="flex gap-2">
+            <Button size="sm" variant={draftSection === 'Act' ? 'default' : 'outline'} onClick={() => void chooseDraftSection('Act')}>Act</Button>
+            <Button size="sm" variant={draftSection === 'Part' ? 'default' : 'outline'} onClick={() => void chooseDraftSection('Part')}>Part</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">New stories use {draftSection}-01 under Current Draft. Switching can rename existing Act/Part folders.</p>
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={showHidden} onChange={(e) => void toggleShowHidden(e.target.checked)}/>

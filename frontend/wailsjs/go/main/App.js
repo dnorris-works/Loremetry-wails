@@ -138,6 +138,10 @@ export function GetCharacter(arg1) {
   return window['go']['main']['App']['GetCharacter'](arg1);
 }
 
+export function GetDraftSection() {
+  return window['go']['main']['App']['GetDraftSection']();
+}
+
 export function GetFolderVisibility() {
   return window['go']['main']['App']['GetFolderVisibility']();
 }
@@ -268,6 +272,10 @@ export function ReorderActs(arg1, arg2) {
 
 export function ReorderStories(arg1, arg2) {
   return window['go']['main']['App']['ReorderStories'](arg1, arg2);
+}
+
+export function SetDraftSection(arg1, arg2) {
+  return window['go']['main']['App']['SetDraftSection'](arg1, arg2);
 }
 
 export function SetFolderLink(arg1) {

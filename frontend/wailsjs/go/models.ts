@@ -745,6 +745,20 @@ export namespace store {
 	        this.story_id = source["story_id"];
 	    }
 	}
+	export class RenameCount {
+	    section: string;
+	    renamed: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RenameCount(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.section = source["section"];
+	        this.renamed = source["renamed"];
+	    }
+	}
 	export class Series {
 	    id: number;
 	    name: string;

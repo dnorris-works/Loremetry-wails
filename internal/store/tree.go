@@ -192,6 +192,9 @@ func scanDirNode(path string) DirNode {
 		return strings.ToLower(node.Files[i].Name) < strings.ToLower(node.Files[j].Name)
 	})
 	node.Count = len(node.Files)
+	for _, f := range node.Folders {
+		node.Count += f.Count
+	}
 	node.Label = fmt.Sprintf("%s (%d)", node.Name, node.Count)
 	return node
 }
@@ -234,19 +237,19 @@ func CreateSeriesOnDisk(writingRoot, penName, penPath, seriesName string) (strin
 	return ApplySeriesTemplate(parent, seriesName)
 }
 
-func CreateBookOnDisk(writingRoot, penName, penPath, seriesPath, bookTitle string) (string, error) {
+func CreateBookOnDisk(writingRoot, penName, penPath, seriesPath, bookTitle, section string) (string, error) {
 	if seriesPath != "" {
 		parent := filepath.Join(seriesPath, "Books")
 		if err := os.MkdirAll(parent, 0o755); err != nil {
 			return "", err
 		}
-		return ApplyBookTemplate(parent, bookTitle, filepath.Base(seriesPath))
+		return ApplyBookTemplate(parent, bookTitle, filepath.Base(seriesPath), section)
 	}
 	parent, err := requirePenDir(writingRoot, penName, penPath)
 	if err != nil {
 		return "", err
 	}
-	return ApplyBookTemplate(parent, bookTitle, "")
+	return ApplyBookTemplate(parent, bookTitle, "", section)
 }
 
 func requirePenDir(writingRoot, penName, penPath string) (string, error) {

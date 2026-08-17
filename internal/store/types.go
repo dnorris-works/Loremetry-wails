@@ -15,6 +15,11 @@ type PathResult struct {
 	Path string `json:"path"`
 }
 
+type RenameCount struct {
+	Section string `json:"section"`
+	Renamed int    `json:"renamed"`
+}
+
 type UpdatedResult struct {
 	Updated bool `json:"updated"`
 }

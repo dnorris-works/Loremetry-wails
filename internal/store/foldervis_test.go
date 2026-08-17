@@ -9,7 +9,7 @@ import (
 func TestFilterWritingTreeHidesNamedFolders(t *testing.T) {
 	root := t.TempDir()
 	pen := filepath.Join(root, "Ada")
-	book, err := ApplyBookTemplate(pen, "Tale", "")
+	book, err := ApplyBookTemplate(pen, "Tale", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

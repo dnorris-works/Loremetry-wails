@@ -12,7 +12,6 @@ import (
 	appdb "loremetry/internal/db"
 	"loremetry/internal/store"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -28,9 +27,9 @@ type App struct {
 	store   *store.Store
 	dbPath  string
 	dbErr   error
-	watchMu sync.Mutex
-	watcher *fsnotify.Watcher
-	syncing bool
+	watchMu   sync.Mutex
+	watchStop chan struct{}
+	syncing   bool
 }
 
 func NewApp() *App {
@@ -269,7 +268,7 @@ func (a *App) CreateStory(in store.StoryInput) (store.IDResult, error) {
 	if err != nil {
 		return store.IDResult{}, err
 	}
-	root, err := store.ApplyBookTemplate(parent, in.Name, seriesName)
+	root, err := store.ApplyBookTemplate(parent, in.Name, seriesName, s.GetDraftSection())
 	if err != nil {
 		return out, err
 	}
@@ -378,12 +377,51 @@ func (a *App) CreateWritingBook(in store.WritingProjectInput) (store.PathResult,
 	if err != nil {
 		return store.PathResult{}, err
 	}
-	path, err := store.CreateBookOnDisk(root, in.PenName, in.PenPath, in.SeriesPath, in.Name)
+	section := "Act"
+	if st, err := a.ready(); err == nil {
+		section = st.GetDraftSection()
+	}
+	path, err := store.CreateBookOnDisk(root, in.PenName, in.PenPath, in.SeriesPath, in.Name, section)
 	if err != nil {
 		return store.PathResult{}, err
 	}
 	a.startFolderWatch()
 	return store.PathResult{Path: path}, nil
+}
+
+func (a *App) GetDraftSection() (string, error) {
+	s, err := a.ready()
+	if err != nil {
+		return "Act", err
+	}
+	return s.GetDraftSection(), nil
+}
+
+func (a *App) SetDraftSection(value string, rename bool) (store.RenameCount, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.RenameCount{}, err
+	}
+	section, err := s.SetDraftSection(value)
+	if err != nil {
+		return store.RenameCount{}, err
+	}
+	out := store.RenameCount{Section: section}
+	if !rename {
+		return out, nil
+	}
+	root, err := a.writingRootIfSet()
+	if err != nil {
+		return out, nil
+	}
+	n, err := store.RenameDraftSections(root, section)
+	if err != nil {
+		return out, err
+	}
+	out.Renamed = n
+	a.startFolderWatch()
+	a.emitFoldersChanged("")
+	return out, nil
 }
 
 func (a *App) RenameWritingProject(path string, name string) (store.PathResult, error) {

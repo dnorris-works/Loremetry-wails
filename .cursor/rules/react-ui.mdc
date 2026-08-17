@@ -1,0 +1,12 @@
+---
+description: Prefer React for all UI
+alwaysApply: true
+---
+
+# React UI
+
+The user-facing app is **React**. Put screens, dialogs, the sidebar, the editor chrome, and click/drag behavior in React components and hooks.
+
+Do not add Vue, extra UI frameworks, or hand-built DOM UI. Use React state and events instead of `document.querySelector` / `innerHTML` for app chrome.
+
+Keep **Go** for Wails bindings, SQLite (`loremetry-app.db`), disk files, and non-rendering logic. Go should return data; React should render it.

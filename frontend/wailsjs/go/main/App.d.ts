@@ -71,6 +71,8 @@ export function GetChapter(arg1:number):Promise<store.Chapter>;
 
 export function GetCharacter(arg1:number):Promise<store.CharacterProfile>;
 
+export function GetDraftSection():Promise<string>;
+
 export function GetFolderVisibility():Promise<store.FolderVisibility>;
 
 export function GetSeriesBible(arg1:number):Promise<store.BibleDoc>;
@@ -136,6 +138,8 @@ export function RenameWritingProject(arg1:string,arg2:string):Promise<store.Path
 export function ReorderActs(arg1:number,arg2:store.IDList):Promise<store.UpdatedResult>;
 
 export function ReorderStories(arg1:number,arg2:store.IDList):Promise<store.UpdatedResult>;
+
+export function SetDraftSection(arg1:string,arg2:boolean):Promise<store.RenameCount>;
 
 export function SetFolderLink(arg1:store.FolderLinkInput):Promise<store.FolderLink>;
 

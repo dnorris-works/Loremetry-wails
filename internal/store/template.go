@@ -42,7 +42,7 @@ func ApplySeriesTemplate(parent, seriesName string) (string, error) {
 	return applyRoot(parent, templates.Series, vars, true)
 }
 
-func ApplyBookTemplate(parent, bookTitle, seriesName string) (string, error) {
+func ApplyBookTemplate(parent, bookTitle, seriesName, section string) (string, error) {
 	inSeries := seriesName != ""
 	title := safeFolderName(bookTitle)
 	name := title
@@ -51,7 +51,7 @@ func ApplyBookTemplate(parent, bookTitle, seriesName string) (string, error) {
 	}
 	node := templates.Book
 	node.Name = name
-	vars := map[string]string{"BookTitle": title, "SeriesName": safeFolderName(seriesName)}
+	vars := map[string]string{"BookTitle": title, "SeriesName": safeFolderName(seriesName), "DraftSection": NormalizeDraftSection(section)}
 	return applyRoot(parent, node, vars, inSeries)
 }
 

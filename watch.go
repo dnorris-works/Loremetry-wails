@@ -1,87 +1,61 @@
 package main
 
 import (
-	"os"
 	"time"
 
-	"loremetry/internal/store"
-
-	"github.com/fsnotify/fsnotify"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func (a *App) startFolderWatch() {
 	a.watchMu.Lock()
-	defer a.watchMu.Unlock()
-	if a.watcher != nil {
-		_ = a.watcher.Close()
-		a.watcher = nil
+	if a.watchStop != nil {
+		close(a.watchStop)
+		a.watchStop = nil
 	}
-	w, err := fsnotify.NewWatcher()
+	stop := make(chan struct{})
+	a.watchStop = stop
+	a.watchMu.Unlock()
+	go a.hashLoop(stop)
+}
+
+func (a *App) hashLoop(stop chan struct{}) {
+	a.scanDiskHashes()
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-tick.C:
+			a.scanDiskHashes()
+		}
+	}
+}
+
+func (a *App) scanDiskHashes() {
+	s, err := a.ready()
 	if err != nil {
 		return
 	}
-	a.watcher = w
-	for _, dir := range a.watchDirs() {
-		_ = w.Add(dir)
-	}
-	go a.watchLoop(w)
-}
-
-func (a *App) watchDirs() []string {
-	var out []string
 	root, err := a.writingRootIfSet()
-	if err == nil && root != "" {
-		out = append(out, store.FolderWatchDirs(root)...)
-	}
-	if a.store != nil {
-		paths, err := a.store.AllHeaderOverridePaths()
-		if err == nil {
-			for _, p := range paths {
-				out = append(out, store.FolderWatchDirs(p)...)
-			}
-		}
-	}
-	return out
-}
-
-func (a *App) watchLoop(w *fsnotify.Watcher) {
-	var delay *time.Timer
-	for {
-		select {
-		case ev, ok := <-w.Events:
-			if !ok {
-				return
-			}
-			if ev.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
-				continue
-			}
-			name := ev.Name
-			if delay != nil {
-				delay.Reset(400 * time.Millisecond)
-				continue
-			}
-			delay = time.AfterFunc(400*time.Millisecond, func() {
-				a.refreshWatchDirs()
-				a.emitFoldersChanged(name)
-			})
-		case _, ok := <-w.Errors:
-			if !ok {
-				return
-			}
-		}
-	}
-}
-
-func (a *App) refreshWatchDirs() {
-	if a.watcher == nil {
+	if err != nil || root == "" {
 		return
 	}
-	for _, dir := range a.watchDirs() {
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			_ = a.watcher.Add(dir)
-		}
+	a.watchMu.Lock()
+	if a.syncing {
+		a.watchMu.Unlock()
+		return
 	}
+	a.syncing = true
+	a.watchMu.Unlock()
+	changed, err := s.SyncDiskHashes(root)
+	a.watchMu.Lock()
+	a.syncing = false
+	a.watchMu.Unlock()
+	if err != nil || !changed {
+		return
+	}
+	a.emitFoldersChanged("")
 }
 
 func (a *App) emitFoldersChanged(path string) {
@@ -94,8 +68,8 @@ func (a *App) emitFoldersChanged(path string) {
 func (a *App) stopFolderWatch() {
 	a.watchMu.Lock()
 	defer a.watchMu.Unlock()
-	if a.watcher != nil {
-		_ = a.watcher.Close()
-		a.watcher = nil
+	if a.watchStop != nil {
+		close(a.watchStop)
+		a.watchStop = nil
 	}
 }

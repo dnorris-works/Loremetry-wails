@@ -13,10 +13,10 @@ func TestListWritingTree(t *testing.T) {
 		t.Fatal(err)
 	}
 	series := filepath.Join(pen, "Rift")
-	if _, err := ApplyBookTemplate(filepath.Join(series, "Books"), "Dawn", "Rift"); err != nil {
+	if _, err := ApplyBookTemplate(filepath.Join(series, "Books"), "Dawn", "Rift", ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ApplyBookTemplate(pen, "Lone", ""); err != nil {
+	if _, err := ApplyBookTemplate(pen, "Lone", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(pen, "LooseNotes"), 0o755); err != nil {
@@ -54,5 +54,23 @@ func TestListWritingTree(t *testing.T) {
 	}
 	if _, err := CreateSeriesOnDisk(root, "Nobody", "", "X"); err == nil {
 		t.Fatal("expected missing author error")
+	}
+}
+
+func TestFolderCountIncludesNestedActs(t *testing.T) {
+	root := t.TempDir()
+	compiled := filepath.Join(root, "01_Compiled")
+	if err := os.MkdirAll(filepath.Join(compiled, "Act-1-Hiding"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(compiled, "Act-1-Hiding", "a.md"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(compiled, "Act-1-Hiding", "b.md"), []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	node := scanDirNode(compiled)
+	if node.Count != 2 || node.Label != "01_Compiled (2)" {
+		t.Fatalf("got count %d label %q", node.Count, node.Label)
 	}
 }

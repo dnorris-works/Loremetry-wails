@@ -8,7 +8,7 @@ import (
 
 func TestChapterRenumberOnCreateDelete(t *testing.T) {
 	root := t.TempDir()
-	book, err := ApplyBookTemplate(root, "Tale", "")
+	book, err := ApplyBookTemplate(root, "Tale", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

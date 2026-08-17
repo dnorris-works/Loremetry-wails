@@ -25,7 +25,7 @@ func TestApplySeriesAndBookTemplates(t *testing.T) {
 			t.Fatalf("missing %s: %v", rel, err)
 		}
 	}
-	bookRoot, err := ApplyBookTemplate(filepath.Join(seriesRoot, "Books"), "Book One", "The Cycle")
+	bookRoot, err := ApplyBookTemplate(filepath.Join(seriesRoot, "Books"), "Book One", "The Cycle", "Part")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestApplySeriesAndBookTemplates(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(bookRoot, "02_Story-Elements", "Characters", "New-Characters-Introduced.md")); err != nil {
 		t.Fatal(err)
 	}
-	alone, err := ApplyBookTemplate(parent, "Standalone", "")
+	alone, err := ApplyBookTemplate(parent, "Standalone", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

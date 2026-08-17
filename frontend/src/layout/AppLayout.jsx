@@ -3,7 +3,6 @@ import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Sidebar } from '@/panels/Sidebar';
 import { DocumentPane } from '@/panels/DocumentPane';
-import { ChatPane } from '@/panels/ChatPane';
 import { useAppState } from '@/lib/app-state';
 import { FileDropListener } from '@/lib/FileDropListener';
 import { SeriesDialog, StoryDialog } from '@/dialogs/EntityDialogs';
@@ -34,7 +33,7 @@ export function AppLayout() {
         catch {
             /* ignore */
         }
-        return [22, 53, 25];
+        return [25, 75];
     })();
     return (<div className="h-full">
       <FileDropListener />
@@ -66,10 +65,6 @@ export function AppLayout() {
         <PanelResizeHandle className="w-1 bg-border hover:bg-primary"/>
         <Panel defaultSize={defaultLayout[1]} minSize={30}>
           <DocumentPane />
-        </Panel>
-        <PanelResizeHandle className="w-1 bg-border hover:bg-primary"/>
-        <Panel defaultSize={defaultLayout[2]} minSize={16}>
-          <ChatPane />
         </Panel>
       </PanelGroup>
 

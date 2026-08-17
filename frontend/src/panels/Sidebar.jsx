@@ -162,7 +162,7 @@ function FolderNode({ node, projectPath }) {
         }}>
       <div className="flex h-5 items-center">
         <button type="button" className={`min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight hover:bg-accent ${node.hidden ? 'text-muted-foreground/70' : 'text-foreground'}`} onClick={() => hasKids && toggleFolder(node.path)}>
-          {node.label || `${node.name} (${files.length})`}
+          {node.label || `${node.name} (${node.count ?? files.length})`}
         </button>
         <Button size="icon" variant="ghost" className="h-5 w-5" title={node.hidden ? 'Show in this story' : 'Hide in this story'} onClick={() => void setHidden(!node.hidden)}>
           {node.hidden ? <Eye className="h-3 w-3"/> : <EyeOff className="h-3 w-3"/>}

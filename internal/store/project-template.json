@@ -24,7 +24,7 @@
             "children": [
               {
                 "type": "folder",
-                "name": "Part-01",
+                "name": "{{DraftSection}}-01",
                 "children": [
                   {
                     "type": "folder",
@@ -41,7 +41,7 @@
             "type": "folder",
             "name": "01_Compiled",
             "children": [
-              { "type": "file", "name": "{{BookTitle}}_current-manuscript.docx" }
+              { "type": "file", "name": "{{BookTitle}}_current-manuscript.md" }
             ]
           },
           { "type": "folder", "name": "02_Archive", "children": [] },

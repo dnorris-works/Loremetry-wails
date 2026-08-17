@@ -160,4 +160,11 @@ CREATE TABLE IF NOT EXISTS header_overrides (
     path         TEXT NOT NULL,
     PRIMARY KEY (project_path, kind)
 );
+
+CREATE TABLE IF NOT EXISTS disk_hashes (
+    root TEXT NOT NULL,
+    rel  TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    PRIMARY KEY (root, rel)
+);
 `

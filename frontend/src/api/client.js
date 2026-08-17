@@ -16,6 +16,8 @@ import {
   SetHiddenFolderNames,
   SetShowHiddenFolders,
   SetFolderOverride,
+  GetDraftSection,
+  SetDraftSection,
   CreateWritingSeries,
   CreateWritingBook,
   RenameWritingProject,
@@ -59,6 +61,8 @@ export const api = {
         key,
         mode: mode ?? '',
     }),
+    getDraftSection: () => GetDraftSection(),
+    setDraftSection: (value, rename) => SetDraftSection(value, !!rename),
     createWritingSeries: (data) => CreateWritingSeries({
         pen_name: data.pen_name ?? '',
         pen_path: data.pen_path ?? '',

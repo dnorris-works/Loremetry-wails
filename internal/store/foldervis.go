@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -188,7 +189,7 @@ func filterProjectTree(projectPath string, node DirNode, vis FolderVisibility) D
 		}
 	}
 	node.Folders = kept
-	return node
+	return recount(node)
 }
 
 func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility) (DirNode, bool) {
@@ -209,5 +210,14 @@ func filterFolder(projectPath, parentRel string, n DirNode, vis FolderVisibility
 		}
 	}
 	n.Folders = kids
-	return n, true
+	return recount(n), true
+}
+
+func recount(n DirNode) DirNode {
+	n.Count = len(n.Files)
+	for i := range n.Folders {
+		n.Count += n.Folders[i].Count
+	}
+	n.Label = fmt.Sprintf("%s (%d)", n.Name, n.Count)
+	return n
 }
