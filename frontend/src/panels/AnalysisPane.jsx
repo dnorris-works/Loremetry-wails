@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 export function AnalysisPane() {
     const { analysisId, setAnalysis } = useAppState();
     const [detail, setDetail] = useState(null);
+    const [busy, setBusy] = useState(false);
     useEffect(() => {
         if (!analysisId) {
             setDetail(null);
@@ -27,12 +28,27 @@ export function AnalysisPane() {
     if (!detail) {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
     }
+    async function run() {
+        setBusy(true);
+        try {
+            await api.runAnalysis(detail.id);
+        }
+        catch (err) {
+            alert(err instanceof Error ? err.message : 'Could not run analysis');
+        }
+        finally {
+            setBusy(false);
+        }
+    }
     return (<div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{detail.label}</div>
           <div className="truncate text-[11px] text-muted-foreground">{detail.group}</div>
         </div>
+        <Button size="sm" onClick={() => void run()} disabled={busy}>
+          {busy ? 'Running…' : 'Run'}
+        </Button>
         <Button size="icon" variant="ghost" onClick={() => setAnalysis('')} title="Close">
           <X className="h-4 w-4"/>
         </Button>

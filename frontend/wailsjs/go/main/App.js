@@ -294,6 +294,10 @@ export function ReorderStories(arg1, arg2) {
   return window['go']['main']['App']['ReorderStories'](arg1, arg2);
 }
 
+export function RunAnalysis(arg1) {
+  return window['go']['main']['App']['RunAnalysis'](arg1);
+}
+
 export function SetDraftSection(arg1, arg2) {
   return window['go']['main']['App']['SetDraftSection'](arg1, arg2);
 }

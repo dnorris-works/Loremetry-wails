@@ -320,6 +320,13 @@ func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
 	return got, nil
 }
 
+func (a *App) RunAnalysis(id string) error {
+	if _, ok := store.GetAnalysisDetail(id); !ok {
+		return fmt.Errorf("unknown analysis")
+	}
+	return fmt.Errorf("this analysis cannot run yet")
+}
+
 func (a *App) MatchAnalysisSources(projectPath string) store.AnalysisSources {
 	return store.MatchAnalysisSources(projectPath)
 }

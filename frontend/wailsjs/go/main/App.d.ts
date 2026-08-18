@@ -149,6 +149,8 @@ export function ReorderActs(arg1:number,arg2:store.IDList):Promise<store.Updated
 
 export function ReorderStories(arg1:number,arg2:store.IDList):Promise<store.UpdatedResult>;
 
+export function RunAnalysis(arg1:string):Promise<void>;
+
 export function SetDraftSection(arg1:string,arg2:boolean):Promise<store.RenameCount>;
 
 export function SetFolderLink(arg1:store.FolderLinkInput):Promise<store.FolderLink>;
