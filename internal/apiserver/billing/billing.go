@@ -19,12 +19,12 @@ type Fake struct {
 func (f Fake) CheckoutURL(userID, plan string) (string, error) {
 	site := f.Site
 	if site == "" {
-		site = "https://loremetry.com"
+		site = "https://api.loremetry.com"
 	}
 	if plan == "" {
 		plan = "writer"
 	}
-	return site + "/api/billing/fake-checkout?user=" + userID + "&plan=" + plan, nil
+	return site + "/billing/fake-checkout?user=" + userID + "&plan=" + plan, nil
 }
 
 func (f Fake) ApplyWebhook(payload []byte) (Grant, error) {

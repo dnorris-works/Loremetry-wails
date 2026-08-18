@@ -13,7 +13,7 @@ import (
 const (
 	AppSettingBaseURL = "cloud_api_base_url"
 	SettingToken      = "cloud_api_token"
-	DefaultBaseURL    = "https://loremetry.com/api"
+	DefaultBaseURL    = "https://api.loremetry.com"
 )
 
 type Account struct {
@@ -76,7 +76,7 @@ func New(baseURL, token string) *Client {
 
 func (c *Client) GetAccount() (Account, error) {
 	var acc Account
-	err := c.do("GET", "/v1/account", nil, &acc)
+	err := c.do("GET", "/account", nil, &acc)
 	return acc, err
 }
 
@@ -85,7 +85,7 @@ func RegisterDevice(baseURL, email string) (string, error) {
 	var out struct {
 		Token string `json:"token"`
 	}
-	if err := c.postPublic("/v1/auth/device", map[string]string{"email": email}, &out); err != nil {
+	if err := c.postPublic("/auth/device", map[string]string{"email": email}, &out); err != nil {
 		return "", err
 	}
 	token := strings.TrimSpace(out.Token)
@@ -97,13 +97,13 @@ func RegisterDevice(baseURL, email string) (string, error) {
 
 func (c *Client) Checkout() (CheckoutResponse, error) {
 	var out CheckoutResponse
-	err := c.do("POST", "/v1/billing/checkout", map[string]string{"plan": "writer"}, &out)
+	err := c.do("POST", "/billing/checkout", map[string]string{"plan": "writer"}, &out)
 	return out, err
 }
 
 func (c *Client) RunAnalysis(analysisID string, sources []RoleText) (RunResponse, error) {
 	var out RunResponse
-	err := c.do("POST", "/v1/analysis/run", RunRequest{AnalysisID: analysisID, Sources: sources}, &out)
+	err := c.do("POST", "/analysis/run", RunRequest{AnalysisID: analysisID, Sources: sources}, &out)
 	return out, err
 }
 
