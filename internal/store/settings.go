@@ -31,6 +31,40 @@ func (s *Store) PutSetting(key, value string) (SettingValue, error) {
 	return SettingValue{Key: key, Value: value}, nil
 }
 
+func (s *Store) GetAppSetting(key string) (SettingValue, error) {
+	var value string
+	err := s.DB.QueryRow(`SELECT value FROM app_settings WHERE key = ?`, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return SettingValue{}, fmt.Errorf("setting not found")
+	}
+	if err != nil {
+		return SettingValue{}, err
+	}
+	return SettingValue{Key: key, Value: value}, nil
+}
+
+func (s *Store) PutAppSetting(key, value string) (SettingValue, error) {
+	_, err := s.DB.Exec(`
+		INSERT INTO app_settings (key, value, updated_at)
+		VALUES (?, ?, datetime('now'))
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+		key, value)
+	if err != nil {
+		return SettingValue{}, err
+	}
+	return SettingValue{Key: key, Value: value}, nil
+}
+
+func (s *Store) CloudToken() string {
+	got, err := s.GetSetting(cloudTokenKey)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(got.Value)
+}
+
+const cloudTokenKey = "cloud_api_token"
+
 var identRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func (s *Store) AdminListTables() (AdminTables, error) {

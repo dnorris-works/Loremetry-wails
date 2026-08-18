@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	SettingBaseURL = "cloud_api_base_url"
-	SettingToken   = "cloud_api_token"
-	DefaultBaseURL = "http://127.0.0.1:8080"
+	AppSettingBaseURL = "cloud_api_base_url"
+	SettingToken      = "cloud_api_token"
+	DefaultBaseURL    = "http://127.0.0.1:8080"
 )
 
 type Account struct {
@@ -80,6 +80,21 @@ func (c *Client) GetAccount() (Account, error) {
 	return acc, err
 }
 
+func RegisterDevice(baseURL, email string) (string, error) {
+	c := New(baseURL, "")
+	var out struct {
+		Token string `json:"token"`
+	}
+	if err := c.postPublic("/v1/auth/device", map[string]string{"email": email}, &out); err != nil {
+		return "", err
+	}
+	token := strings.TrimSpace(out.Token)
+	if token == "" {
+		return "", fmt.Errorf("no device token returned")
+	}
+	return token, nil
+}
+
 func (c *Client) Checkout() (CheckoutResponse, error) {
 	var out CheckoutResponse
 	err := c.do("POST", "/v1/billing/checkout", map[string]string{"plan": "writer"}, &out)
@@ -96,6 +111,14 @@ func (c *Client) do(method, path string, body any, dest any) error {
 	if c.Token == "" {
 		return APIError{Status: 401, Code: "PLAN_REQUIRED", Message: "This analysis uses AI. Choose a plan / add credits."}
 	}
+	return c.request(method, path, body, dest, true)
+}
+
+func (c *Client) postPublic(path string, body any, dest any) error {
+	return c.request(http.MethodPost, path, body, dest, false)
+}
+
+func (c *Client) request(method, path string, body any, dest any, auth bool) error {
 	var rdr io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -108,7 +131,9 @@ func (c *Client) do(method, path string, body any, dest any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	if auth {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

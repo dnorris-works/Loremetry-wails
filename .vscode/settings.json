@@ -1,4 +1,8 @@
 {
+  "go.useGoWork": true,
+  "gopls": {
+    "build.directoryFilters": ["-frontend", "-build"]
+  },
   "npm.autoDetect": "off",
   "workbench.browser.openLocalhostLinks": false,
   "simpleBrowser.useIntegratedBrowser": false,

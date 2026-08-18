@@ -395,14 +395,22 @@ func (a *App) cloudClient() (*cloud.Client, error) {
 		return nil, err
 	}
 	base := cloud.DefaultBaseURL
-	if got, err := s.GetSetting(cloud.SettingBaseURL); err == nil && strings.TrimSpace(got.Value) != "" {
+	if got, err := s.GetAppSetting(cloud.AppSettingBaseURL); err == nil && strings.TrimSpace(got.Value) != "" {
 		base = got.Value
 	}
-	token := ""
-	if got, err := s.GetSetting(cloud.SettingToken); err == nil {
-		token = got.Value
+	return cloud.New(base, s.CloudToken()), nil
+}
+
+func (a *App) cloudBaseURL() (string, error) {
+	s, err := a.ready()
+	if err != nil {
+		return "", err
 	}
-	return cloud.New(base, token), nil
+	base := cloud.DefaultBaseURL
+	if got, err := s.GetAppSetting(cloud.AppSettingBaseURL); err == nil && strings.TrimSpace(got.Value) != "" {
+		base = got.Value
+	}
+	return base, nil
 }
 
 func (a *App) GetCloudAccount() (cloud.Account, error) {
@@ -413,16 +421,31 @@ func (a *App) GetCloudAccount() (cloud.Account, error) {
 	return cli.GetAccount()
 }
 
-func (a *App) PutCloudToken(baseURL, token string) error {
+func (a *App) ConnectCloudAccount(email string) (cloud.Account, error) {
 	s, err := a.ready()
 	if err != nil {
-		return err
+		return cloud.Account{}, err
 	}
-	if _, err := s.PutSetting(cloud.SettingBaseURL, strings.TrimSpace(baseURL)); err != nil {
-		return err
+	base, err := a.cloudBaseURL()
+	if err != nil {
+		return cloud.Account{}, err
 	}
-	_, err = s.PutSetting(cloud.SettingToken, strings.TrimSpace(token))
-	return err
+	token, err := cloud.RegisterDevice(base, email)
+	if err != nil {
+		return cloud.Account{}, err
+	}
+	if _, err := s.PutSetting(cloud.SettingToken, token); err != nil {
+		return cloud.Account{}, err
+	}
+	return cloud.New(base, token).GetAccount()
+}
+
+func (a *App) HasCloudAccount() bool {
+	s, err := a.ready()
+	if err != nil {
+		return false
+	}
+	return s.CloudToken() != ""
 }
 
 func (a *App) OpenBillingCheckout() error {

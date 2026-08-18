@@ -158,7 +158,9 @@ export function ReorderStories(arg1:number,arg2:store.IDList):Promise<store.Upda
 
 export function OpenBillingCheckout():Promise<void>;
 
-export function PutCloudToken(arg1:string,arg2:string):Promise<void>;
+export function ConnectCloudAccount(arg1:string):Promise<cloud.Account>;
+
+export function HasCloudAccount():Promise<boolean>;
 
 export function RunAnalysis(arg1:string,arg2:string):Promise<store.AnalysisReport>;
 

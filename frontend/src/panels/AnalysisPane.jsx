@@ -93,7 +93,13 @@ export function AnalysisPane() {
       <div className="flex-1 overflow-auto p-6">
         <p className="max-w-2xl text-sm leading-relaxed">{detail.description || 'No description.'}</p>
         {ai && <p className="mt-2 max-w-2xl text-xs text-muted-foreground">This analysis uses AI and needs a plan or credits.</p>}
-        {notice && <p className="mt-3 max-w-2xl text-sm text-destructive">{notice}</p>}
+        {notice && (<div className="mt-3 max-w-2xl space-y-2">
+          <p className="text-sm text-destructive">{notice}</p>
+          {ai && notice.includes('AI') && (<div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => void api.connectCloudAccount('').then(() => setNotice('Connected. Try Run again.')).catch((e) => setNotice(e instanceof Error ? e.message : 'Connect failed'))}>Connect for AI</Button>
+            <Button size="sm" variant="outline" onClick={() => void api.openBillingCheckout().catch((e) => setNotice(e instanceof Error ? e.message : 'Checkout failed'))}>Choose a plan</Button>
+          </div>)}
+        </div>)}
         {(detail.needs || []).length > 0 && (<div className="mt-6">
           <div className="mb-2 text-[10px] font-semibold uppercase text-muted-foreground">Uses</div>
           <ul className="space-y-1 text-sm">

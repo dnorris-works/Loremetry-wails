@@ -310,8 +310,12 @@ export function OpenBillingCheckout() {
   return window['go']['main']['App']['OpenBillingCheckout']();
 }
 
-export function PutCloudToken(arg1, arg2) {
-  return window['go']['main']['App']['PutCloudToken'](arg1, arg2);
+export function ConnectCloudAccount(arg1) {
+  return window['go']['main']['App']['ConnectCloudAccount'](arg1);
+}
+
+export function HasCloudAccount() {
+  return window['go']['main']['App']['HasCloudAccount']();
 }
 
 export function RunAnalysis(arg1, arg2) {
