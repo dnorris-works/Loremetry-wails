@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -35,23 +36,32 @@ func main() {
 		ledger:  ledger.New(),
 		gateway: gw,
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", s.health)
-	mux.HandleFunc("GET /account", s.account)
-	mux.HandleFunc("POST /auth/device", s.device)
-	mux.HandleFunc("POST /billing/checkout", s.checkout)
-	mux.HandleFunc("POST /webhooks/billing", s.webhook)
-	mux.HandleFunc("POST /analysis/run", s.run)
-	mux.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
+	api := http.NewServeMux()
+	api.HandleFunc("GET /health", s.health)
+	api.HandleFunc("GET /account", s.account)
+	api.HandleFunc("POST /auth/device", s.device)
+	api.HandleFunc("POST /billing/checkout", s.checkout)
+	api.HandleFunc("POST /webhooks/billing", s.webhook)
+	api.HandleFunc("POST /analysis/run", s.run)
+	api.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
+
+	var site http.Handler
+	if dir := websiteDir(); dir != "" {
+		if _, err := os.Stat(filepath.Join(dir, "index.html")); err == nil {
+			site = websiteHandler(dir)
+			log.Printf("serving website from %s", dir)
+		}
+	}
+
 	addr := env("PORT", "")
 	if addr == "" {
-		addr = env("LOREMETRY_API_ADDR", "8080")
+		addr = env("LOREMETRY_API_ADDR", "5000")
 	}
 	if !strings.Contains(addr, ":") {
 		addr = ":" + addr
 	}
-	log.Printf("loremetry api %s", addr)
-	log.Fatal(http.ListenAndServe(addr, cors(mux)))
+	log.Printf("loremetry %s", addr)
+	log.Fatal(http.ListenAndServe(addr, cors(routeByHost(api, site, s.health))))
 }
 
 func env(k, def string) string {

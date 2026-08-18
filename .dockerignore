@@ -1,0 +1,11 @@
+.git
+.github
+frontend/node_modules
+frontend/dist
+website/node_modules
+website/dist
+node_modules
+build/bin
+*.db
+*.log
+.DS_Store

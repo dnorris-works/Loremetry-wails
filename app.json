@@ -1,11 +1,5 @@
 {
-  "name": "loremetry-api",
-  "build": {
-    "config": {
-      "GOVERSION": "go1.25",
-      "GO_BUILD_FLAGS": "-o bin/server ./cmd/server"
-    }
-  },
+  "name": "loremetry",
   "formation": {
     "web": {
       "quantity": 1
