@@ -9,6 +9,7 @@ CREATE INDEX IF NOT EXISTS idx_story_acts_story ON story_acts(story_id, sort_ord
 CREATE INDEX IF NOT EXISTS idx_char_profiles_story ON character_profiles(story_id);
 CREATE INDEX IF NOT EXISTS idx_char_profiles_series ON character_profiles(series_id);
 CREATE INDEX IF NOT EXISTS idx_series_bible_sort ON series_bible_documents(series_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_analysis_reports_user ON analysis_reports(user_id, created_at DESC);
 `
 
 const schemaSQL = `
@@ -166,5 +167,16 @@ CREATE TABLE IF NOT EXISTS disk_hashes (
     rel  TEXT NOT NULL,
     hash TEXT NOT NULL,
     PRIMARY KEY (root, rel)
+);
+
+CREATE TABLE IF NOT EXISTS analysis_reports (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    analysis_id   TEXT NOT NULL,
+    analysis_label TEXT NOT NULL,
+    project_path  TEXT NOT NULL,
+    uses_ai       INTEGER NOT NULL DEFAULT 0,
+    body          TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `

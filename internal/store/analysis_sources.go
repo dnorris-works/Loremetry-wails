@@ -27,6 +27,62 @@ type AnalysisSources struct {
 	Roles       []AnalysisRoleMatch `json:"roles"`
 }
 
+type RoleText struct {
+	Role string `json:"role"`
+	Rel  string `json:"rel"`
+	Name string `json:"name"`
+	Text string `json:"text"`
+}
+
+func ResolveProjectRoot(start string) string {
+	p := filepath.Clean(strings.TrimSpace(start))
+	if p == "" || p == "." {
+		return ""
+	}
+	info, err := os.Stat(p)
+	if err == nil && !info.IsDir() {
+		p = filepath.Dir(p)
+	}
+	cur := p
+	for {
+		if looksBook(cur) || looksSeries(cur) {
+			return cur
+		}
+		next := filepath.Dir(cur)
+		if next == cur {
+			break
+		}
+		cur = next
+	}
+	return p
+}
+
+const maxSourceBytes = 400_000
+
+func CollectNeededText(projectPath string, needs []string) []RoleText {
+	src := MatchAnalysisSources(projectPath)
+	var out []RoleText
+	used := 0
+	for _, need := range needs {
+		role := src.Role(need)
+		for _, f := range role.Files {
+			if used >= maxSourceBytes {
+				return out
+			}
+			b, err := os.ReadFile(f.Path)
+			if err != nil {
+				continue
+			}
+			if used+len(b) > maxSourceBytes {
+				b = b[:maxSourceBytes-used]
+			}
+			out = append(out, RoleText{Role: need, Rel: f.Rel, Name: f.Name, Text: string(b)})
+			used += len(b)
+		}
+	}
+	return out
+}
+
 type analysisRoleSpec struct {
 	role string
 	rel  string

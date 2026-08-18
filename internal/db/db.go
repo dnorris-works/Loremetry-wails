@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 8
+const schemaVersion = 9
 
 func DefaultPath() (string, error) {
 	configDir, err := os.UserConfigDir()

@@ -19,6 +19,25 @@ export namespace main {
 
 }
 
+export namespace cloud {
+	export class Account {
+	    plan: string;
+	    credits: number;
+	    remaining: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Account(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.plan = source["plan"];
+	        this.credits = source["credits"];
+	        this.remaining = source["remaining"];
+	    }
+	}
+}
+
 export namespace store {
 	
 	export class ActInput {
@@ -135,6 +154,7 @@ export namespace store {
 	    group: string;
 	    description: string;
 	    needs: string[];
+	    uses_ai: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisDetail(source);
@@ -147,6 +167,7 @@ export namespace store {
 	        this.group = source["group"];
 	        this.description = source["description"];
 	        this.needs = source["needs"];
+	        this.uses_ai = source["uses_ai"];
 	    }
 	}
 	export class AnalysisFile {
@@ -170,6 +191,7 @@ export namespace store {
 	    label: string;
 	    description: string;
 	    needs: string[];
+	    uses_ai: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisItem(source);
@@ -181,6 +203,31 @@ export namespace store {
 	        this.label = source["label"];
 	        this.description = source["description"];
 	        this.needs = source["needs"];
+	        this.uses_ai = source["uses_ai"];
+	    }
+	}
+	export class AnalysisReport {
+	    id: number;
+	    analysis_id: string;
+	    analysis_label: string;
+	    project_path: string;
+	    uses_ai: boolean;
+	    body: string;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.analysis_id = source["analysis_id"];
+	        this.analysis_label = source["analysis_label"];
+	        this.project_path = source["project_path"];
+	        this.uses_ai = source["uses_ai"];
+	        this.body = source["body"];
+	        this.created_at = source["created_at"];
 	    }
 	}
 	export class AnalysisGroup {

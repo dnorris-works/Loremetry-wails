@@ -138,6 +138,14 @@ export function GetAnalysis(arg1) {
   return window['go']['main']['App']['GetAnalysis'](arg1);
 }
 
+export function GetAnalysisReport(arg1) {
+  return window['go']['main']['App']['GetAnalysisReport'](arg1);
+}
+
+export function GetCloudAccount() {
+  return window['go']['main']['App']['GetCloudAccount']();
+}
+
 export function GetChapter(arg1) {
   return window['go']['main']['App']['GetChapter'](arg1);
 }
@@ -180,6 +188,10 @@ export function ImportDiskFiles(arg1, arg2) {
 
 export function ListActs(arg1) {
   return window['go']['main']['App']['ListActs'](arg1);
+}
+
+export function ListAnalysisReports() {
+  return window['go']['main']['App']['ListAnalysisReports']();
 }
 
 export function ListAnalysisCatalog() {
@@ -294,8 +306,16 @@ export function ReorderStories(arg1, arg2) {
   return window['go']['main']['App']['ReorderStories'](arg1, arg2);
 }
 
-export function RunAnalysis(arg1) {
-  return window['go']['main']['App']['RunAnalysis'](arg1);
+export function OpenBillingCheckout() {
+  return window['go']['main']['App']['OpenBillingCheckout']();
+}
+
+export function PutCloudToken(arg1, arg2) {
+  return window['go']['main']['App']['PutCloudToken'](arg1, arg2);
+}
+
+export function RunAnalysis(arg1, arg2) {
+  return window['go']['main']['App']['RunAnalysis'](arg1, arg2);
 }
 
 export function SetDraftSection(arg1, arg2) {

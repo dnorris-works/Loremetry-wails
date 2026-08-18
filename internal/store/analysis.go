@@ -7,6 +7,7 @@ type AnalysisItem struct {
 	Label       string   `json:"label"`
 	Description string   `json:"description"`
 	Needs       []string `json:"needs"`
+	UsesAI      bool     `json:"uses_ai"`
 }
 
 type AnalysisDetail struct {
@@ -15,12 +16,13 @@ type AnalysisDetail struct {
 	Group       string   `json:"group"`
 	Description string   `json:"description"`
 	Needs       []string `json:"needs"`
+	UsesAI      bool     `json:"uses_ai"`
 }
 
 type AnalysisGroup struct {
-	ID    string          `json:"id"`
-	Label string          `json:"label"`
-	Items []AnalysisItem  `json:"items"`
+	ID    string         `json:"id"`
+	Label string         `json:"label"`
+	Items []AnalysisItem `json:"items"`
 }
 
 func AnalysisCatalog() []AnalysisGroup {
@@ -28,7 +30,7 @@ func AnalysisCatalog() []AnalysisGroup {
 		if needs == nil {
 			needs = []string{}
 		}
-		return AnalysisItem{ID: id, Label: label, Description: analysisDescription(id), Needs: needs}
+		return AnalysisItem{ID: id, Label: label, Description: analysisDescription(id), Needs: needs, UsesAI: analysisUsesAI(id)}
 	}
 	return []AnalysisGroup{
 		{ID: "kdp-wide", Label: "KDP / Wide", Items: []AnalysisItem{
@@ -105,11 +107,21 @@ func GetAnalysisDetail(id string) (AnalysisDetail, bool) {
 					Group:       g.Label,
 					Description: it.Description,
 					Needs:       it.Needs,
+					UsesAI:      it.UsesAI,
 				}, true
 			}
 		}
 	}
 	return AnalysisDetail{}, false
+}
+
+func analysisUsesAI(id string) bool {
+	switch id {
+	case "zeigarnik_analysis", "print_production", "line_polish", "vellum_prep":
+		return false
+	default:
+		return true
+	}
 }
 
 func analysisDescription(id string) string {
@@ -206,4 +218,3 @@ func analysisDescription(id string) string {
 		return ""
 	}
 }
-

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"loremetry/internal/cloud"
 	appdb "loremetry/internal/db"
 	"loremetry/internal/store"
 
@@ -22,11 +23,11 @@ type ImportedFile struct {
 }
 
 type App struct {
-	ctx     context.Context
-	db      *sql.DB
-	store   *store.Store
-	dbPath  string
-	dbErr   error
+	ctx       context.Context
+	db        *sql.DB
+	store     *store.Store
+	dbPath    string
+	dbErr     error
 	watchMu   sync.Mutex
 	watchStop chan struct{}
 	syncing   bool
@@ -320,11 +321,124 @@ func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
 	return got, nil
 }
 
-func (a *App) RunAnalysis(id string) error {
-	if _, ok := store.GetAnalysisDetail(id); !ok {
-		return fmt.Errorf("unknown analysis")
+func (a *App) RunAnalysis(id string, projectPath string) (store.AnalysisReport, error) {
+	detail, ok := store.GetAnalysisDetail(id)
+	if !ok {
+		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
 	}
-	return fmt.Errorf("this analysis cannot run yet")
+	s, err := a.ready()
+	if err != nil {
+		return store.AnalysisReport{}, err
+	}
+	root := store.ResolveProjectRoot(projectPath)
+	if root == "" {
+		return store.AnalysisReport{}, fmt.Errorf("select a book or series first")
+	}
+	src := store.MatchAnalysisSources(root)
+	for _, need := range detail.Needs {
+		role := src.Role(need)
+		if !role.Present || len(role.Files) == 0 {
+			return store.AnalysisReport{}, fmt.Errorf("missing source: %s", need)
+		}
+	}
+	var body string
+	usesAI := detail.UsesAI
+	if !usesAI {
+		body, err = store.RunLocalAnalysis(id, root)
+		if err != nil {
+			return store.AnalysisReport{}, err
+		}
+	} else {
+		cli, err := a.cloudClient()
+		if err != nil {
+			return store.AnalysisReport{}, err
+		}
+		blobs := store.CollectNeededText(root, detail.Needs)
+		src := make([]cloud.RoleText, 0, len(blobs))
+		for _, b := range blobs {
+			src = append(src, cloud.RoleText{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
+		}
+		out, err := cli.RunAnalysis(id, src)
+		if err != nil {
+			return store.AnalysisReport{}, err
+		}
+		body = out.Body
+	}
+	return s.SaveAnalysisReport(store.AnalysisReport{
+		AnalysisID:    detail.ID,
+		AnalysisLabel: detail.Label,
+		ProjectPath:   root,
+		UsesAI:        usesAI,
+		Body:          body,
+	})
+}
+
+func (a *App) ListAnalysisReports() ([]store.AnalysisReport, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListAnalysisReports()
+}
+
+func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AnalysisReport{}, err
+	}
+	return s.GetAnalysisReport(id)
+}
+
+func (a *App) cloudClient() (*cloud.Client, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	base := cloud.DefaultBaseURL
+	if got, err := s.GetSetting(cloud.SettingBaseURL); err == nil && strings.TrimSpace(got.Value) != "" {
+		base = got.Value
+	}
+	token := ""
+	if got, err := s.GetSetting(cloud.SettingToken); err == nil {
+		token = got.Value
+	}
+	return cloud.New(base, token), nil
+}
+
+func (a *App) GetCloudAccount() (cloud.Account, error) {
+	cli, err := a.cloudClient()
+	if err != nil {
+		return cloud.Account{}, err
+	}
+	return cli.GetAccount()
+}
+
+func (a *App) PutCloudToken(baseURL, token string) error {
+	s, err := a.ready()
+	if err != nil {
+		return err
+	}
+	if _, err := s.PutSetting(cloud.SettingBaseURL, strings.TrimSpace(baseURL)); err != nil {
+		return err
+	}
+	_, err = s.PutSetting(cloud.SettingToken, strings.TrimSpace(token))
+	return err
+}
+
+func (a *App) OpenBillingCheckout() error {
+	cli, err := a.cloudClient()
+	if err != nil {
+		return err
+	}
+	out, err := cli.Checkout()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(out.URL) == "" {
+		return fmt.Errorf("no checkout URL")
+	}
+	runtime.BrowserOpenURL(a.ctx, out.URL)
+	return nil
 }
 
 func (a *App) MatchAnalysisSources(projectPath string) store.AnalysisSources {

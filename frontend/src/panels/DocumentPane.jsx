@@ -3,7 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { LexicalEditor } from '@/editor/LexicalEditor';
-import { AnalysisPane } from '@/panels/AnalysisPane';
+import { AnalysisPane, ReportPane } from '@/panels/AnalysisPane';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
@@ -41,7 +41,7 @@ function selectionKey(selection) {
     return '';
 }
 export function DocumentPane() {
-    const { selection, setSelection, bumpRefresh, analysisId } = useAppState();
+    const { selection, setSelection, bumpRefresh, analysisId, reportId } = useAppState();
     const confirm = useConfirm();
     const [loaded, setLoaded] = useState(null);
     const [title, setTitle] = useState('');
@@ -129,6 +129,9 @@ export function DocumentPane() {
         catch (err) {
             alert(err instanceof Error ? err.message : 'Could not delete');
         }
+    }
+    if (reportId) {
+        return <ReportPane />;
     }
     if (analysisId) {
         return <AnalysisPane />;

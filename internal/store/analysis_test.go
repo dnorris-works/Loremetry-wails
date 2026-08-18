@@ -18,7 +18,11 @@ func TestAnalysisCatalog(t *testing.T) {
 		t.Fatalf("items %d", n)
 	}
 	got, ok := GetAnalysisDetail("show_dont_tell")
-	if !ok || got.Label == "" || got.Description == "" {
+	if !ok || got.Label == "" || got.Description == "" || !got.UsesAI {
 		t.Fatalf("detail %+v %v", got, ok)
+	}
+	local, ok := GetAnalysisDetail("line_polish")
+	if !ok || local.UsesAI {
+		t.Fatalf("local %+v %v", local, ok)
 	}
 }

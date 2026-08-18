@@ -11,10 +11,11 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
-    const { setSelection, analysisId, setAnalysis, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
+    const { setSelection, analysisId, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
     const [analysisGroups, setAnalysisGroups] = useState([]);
+    const [reports, setReports] = useState([]);
     const [theme, setTheme] = useState(readTheme());
     useEffect(() => {
         void (async () => {
@@ -29,6 +30,9 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
     useEffect(() => {
         void api.listAnalysisCatalog().then(setAnalysisGroups).catch(() => setAnalysisGroups([]));
     }, []);
+    useEffect(() => {
+        void api.listAnalysisReports().then(setReports).catch(() => setReports([]));
+    }, [refreshKey]);
     async function onToggleTheme() {
         const next = theme === 'dark' ? 'light' : 'dark';
         setTheme(next);
@@ -65,11 +69,20 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
       <div className="flex-1 overflow-auto p-2">
         {tab === 'analysis' && analysisGroups.map((g) => (<div key={g.id} className="mb-3">
           <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
-          {(g.items || []).map((item) => (<button key={item.id} type="button" className={`w-full truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
-            {item.label}
-          </button>))}
+          {(g.items || []).map((item) => {
+            const ai = !!(item.uses_ai ?? item.usesAI);
+            return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
+          </button>);
+          })}
         </div>))}
-        {tab === 'reports' && (<p className="px-1 text-xs text-muted-foreground">No saved reports yet.</p>)}
+        {tab === 'reports' && (reports.length === 0 ? (<p className="px-1 text-xs text-muted-foreground">No saved reports yet.</p>) : reports.map((r) => (
+          <button key={r.id} type="button" className={`mb-1 w-full truncate px-1 py-0.5 text-left text-xs hover:bg-accent ${reportId === r.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setReport(r.id)}>
+            {r.analysis_label || r.analysisLabel}
+            <span className="block truncate text-[10px] text-muted-foreground">{r.created_at || r.createdAt}</span>
+          </button>
+        )))}
         {tab === 'projects' && (<>
         {(tree.problems || []).map((p) => (<p key={p.path || p.message} className="mb-2 px-1 text-[11px] text-destructive">{p.message}</p>))}
         {pens.map((pen) => {

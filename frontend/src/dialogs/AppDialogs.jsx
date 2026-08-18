@@ -15,6 +15,9 @@ export function SettingsDialog({ open, onOpenChange }) {
     const [hiddenNames, setHiddenNames] = useState([]);
     const [showHidden, setShowHidden] = useState(false);
     const [draftSection, setDraftSection] = useState('Act');
+    const [cloudURL, setCloudURL] = useState('http://127.0.0.1:8080');
+    const [cloudToken, setCloudToken] = useState('');
+    const [cloudAccount, setCloudAccount] = useState(null);
     useEffect(() => {
         if (!open)
             return;
@@ -25,6 +28,9 @@ export function SettingsDialog({ open, onOpenChange }) {
             setShowHidden(!!(v.show_hidden ?? v.showHidden));
         }).catch(() => { });
         void api.getDraftSection().then((v) => setDraftSection(v === 'Part' ? 'Part' : 'Act')).catch(() => setDraftSection('Act'));
+        void api.getSetting('cloud_api_base_url').then((s) => setCloudURL(s.value || 'http://127.0.0.1:8080')).catch(() => setCloudURL('http://127.0.0.1:8080'));
+        void api.getSetting('cloud_api_token').then((s) => setCloudToken(s.value || '')).catch(() => setCloudToken(''));
+        void api.getCloudAccount().then(setCloudAccount).catch(() => setCloudAccount(null));
     }, [open]);
     async function pickRoot() {
         try {
@@ -49,6 +55,18 @@ export function SettingsDialog({ open, onOpenChange }) {
         setShowHidden(on);
         await api.setShowHiddenFolders(on);
         bumpRefresh();
+    }
+    async function saveCloud() {
+        try {
+            await api.putCloudToken(cloudURL, cloudToken);
+            try {
+                setCloudAccount(await api.getCloudAccount());
+            } catch {
+                setCloudAccount(null);
+            }
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Could not save AI account');
+        }
     }
     async function chooseDraftSection(next) {
         if (next === draftSection)
@@ -94,6 +112,17 @@ export function SettingsDialog({ open, onOpenChange }) {
             <Button size="sm" variant={draftSection === 'Part' ? 'default' : 'outline'} onClick={() => void chooseDraftSection('Part')}>Part</Button>
           </div>
           <p className="text-xs text-muted-foreground">New stories use {draftSection}-01 under Current Draft. Switching can rename existing Act/Part folders.</p>
+        </div>
+        <div className="mt-4 space-y-1">
+          <div className="text-sm">AI account</div>
+          <p className="text-xs text-muted-foreground">Local analyses run without this. AI analyses need a device token from your Loremetry account site.</p>
+          <input className="w-full rounded border border-border bg-background px-2 py-1 text-sm" value={cloudURL} onChange={(e) => setCloudURL(e.target.value)} placeholder="API URL"/>
+          <input className="w-full rounded border border-border bg-background px-2 py-1 text-sm" value={cloudToken} onChange={(e) => setCloudToken(e.target.value)} placeholder="Device token"/>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => void saveCloud()}>Save</Button>
+            <Button size="sm" variant="outline" onClick={() => void api.openBillingCheckout().catch((err) => alert(err instanceof Error ? err.message : 'Checkout failed'))}>Choose a plan</Button>
+          </div>
+          {cloudAccount && <p className="text-xs text-muted-foreground">{cloudAccount.plan || 'No plan'} — {cloudAccount.remaining || `${cloudAccount.credits ?? 0} credits`}</p>}
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={showHidden} onChange={(e) => void toggleShowHidden(e.target.checked)}/>
