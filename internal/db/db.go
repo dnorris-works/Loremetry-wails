@@ -71,7 +71,7 @@ func migrate(conn *sql.DB) error {
 	if _, err := conn.Exec(indexSQL); err != nil {
 		return fmt.Errorf("apply indexes: %w", err)
 	}
-	_, _ = conn.Exec(`INSERT OR IGNORE INTO app_settings (key, value) VALUES ('cloud_api_base_url', 'http://127.0.0.1:8080')`)
+	_, _ = conn.Exec(`INSERT OR IGNORE INTO app_settings (key, value) VALUES ('cloud_api_base_url', 'https://loremetry.com/api')`)
 	_, err := conn.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, schemaVersion))
 	return err
 }

@@ -31,18 +31,18 @@ func main() {
 	}
 	s := &server{
 		auth:    auth.New(),
-		bill:    billing.Fake{Site: env("LOREMETRY_SITE", "http://127.0.0.1:8080")},
+		bill:    billing.Fake{Site: env("LOREMETRY_SITE", "https://loremetry.com")},
 		ledger:  ledger.New(),
 		gateway: gw,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.health)
-	mux.HandleFunc("GET /v1/account", s.account)
-	mux.HandleFunc("POST /v1/auth/device", s.device)
-	mux.HandleFunc("POST /v1/billing/checkout", s.checkout)
-	mux.HandleFunc("POST /v1/webhooks/billing", s.webhook)
-	mux.HandleFunc("POST /v1/analysis/run", s.run)
-	mux.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
+	mux.HandleFunc("GET /api/v1/account", s.account)
+	mux.HandleFunc("POST /api/v1/auth/device", s.device)
+	mux.HandleFunc("POST /api/v1/billing/checkout", s.checkout)
+	mux.HandleFunc("POST /api/v1/webhooks/billing", s.webhook)
+	mux.HandleFunc("POST /api/v1/analysis/run", s.run)
+	mux.HandleFunc("GET /api/billing/fake-checkout", s.fakeCheckoutPage)
 	addr := env("PORT", "")
 	if addr == "" {
 		addr = env("LOREMETRY_API_ADDR", "8080")

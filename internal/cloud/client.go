@@ -13,7 +13,7 @@ import (
 const (
 	AppSettingBaseURL = "cloud_api_base_url"
 	SettingToken      = "cloud_api_token"
-	DefaultBaseURL    = "http://127.0.0.1:8080"
+	DefaultBaseURL    = "https://loremetry.com/api"
 )
 
 type Account struct {
