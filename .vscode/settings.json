@@ -1,5 +1,4 @@
 {
-  "go.useGoWork": true,
   "gopls": {
     "build.directoryFilters": ["-frontend", "-build"]
   },

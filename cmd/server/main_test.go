@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"loremetry/server/internal/auth"
-	"loremetry/server/internal/billing"
-	"loremetry/server/internal/ledger"
-	"loremetry/server/internal/models"
+	"loremetry/internal/apiserver/auth"
+	"loremetry/internal/apiserver/billing"
+	"loremetry/internal/apiserver/ledger"
+	"loremetry/internal/apiserver/models"
 )
 
 func testServer() *server {

@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"loremetry/server/internal/analysis"
-	"loremetry/server/internal/auth"
-	"loremetry/server/internal/billing"
-	"loremetry/server/internal/ledger"
-	"loremetry/server/internal/models"
+	"loremetry/internal/apiserver/analysis"
+	"loremetry/internal/apiserver/auth"
+	"loremetry/internal/apiserver/billing"
+	"loremetry/internal/apiserver/ledger"
+	"loremetry/internal/apiserver/models"
 )
 
 type server struct {
@@ -44,7 +44,7 @@ func main() {
 	mux.HandleFunc("POST /v1/analysis/run", s.run)
 	mux.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
 	addr := env("LOREMETRY_API_ADDR", ":8080")
-	log.Printf("loremetry/server %s", addr)
+	log.Printf("loremetry api %s", addr)
 	log.Fatal(http.ListenAndServe(addr, cors(mux)))
 }
 
