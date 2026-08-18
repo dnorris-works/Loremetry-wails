@@ -43,7 +43,13 @@ func main() {
 	mux.HandleFunc("POST /v1/webhooks/billing", s.webhook)
 	mux.HandleFunc("POST /v1/analysis/run", s.run)
 	mux.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
-	addr := env("LOREMETRY_API_ADDR", ":8080")
+	addr := env("PORT", "")
+	if addr == "" {
+		addr = env("LOREMETRY_API_ADDR", "8080")
+	}
+	if !strings.Contains(addr, ":") {
+		addr = ":" + addr
+	}
 	log.Printf("loremetry api %s", addr)
 	log.Fatal(http.ListenAndServe(addr, cors(mux)))
 }

@@ -6,7 +6,7 @@ Account, credits, and AI analysis proxy for the Loremetry desktop app. Novel fil
 go run ./cmd/server
 ```
 
-Listens on `:8080`.
+Listens on `:8080` locally (or `PORT` env on Miget).
 
 ## Local development
 

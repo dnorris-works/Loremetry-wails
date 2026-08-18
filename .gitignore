@@ -3,6 +3,7 @@ build/darwin
 frontend/dist
 frontend/node_modules
 node_modules
+bin/
 *.db
 *.log
 .DS_Store
