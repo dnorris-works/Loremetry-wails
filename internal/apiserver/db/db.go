@@ -87,6 +87,27 @@ func migrate(ctx context.Context, db *sql.DB) error {
 			prompt_tokens INT NOT NULL DEFAULT 0,
 			completion_tokens INT NOT NULL DEFAULT 0
 		)`,
+		`CREATE TABLE IF NOT EXISTS ai_call_log (
+			id BIGSERIAL PRIMARY KEY,
+			user_id TEXT NOT NULL DEFAULT '',
+			job_id TEXT NOT NULL DEFAULT '',
+			analysis_id TEXT NOT NULL DEFAULT '',
+			step_name TEXT NOT NULL DEFAULT '',
+			model TEXT NOT NULL DEFAULT '',
+			model_tier TEXT NOT NULL DEFAULT '',
+			system_prompt TEXT NOT NULL DEFAULT '',
+			user_prompt TEXT NOT NULL DEFAULT '',
+			response_body TEXT NOT NULL DEFAULT '',
+			prompt_tokens INT NOT NULL DEFAULT 0,
+			completion_tokens INT NOT NULL DEFAULT 0,
+			total_tokens INT NOT NULL DEFAULT 0,
+			duration_ms INT NOT NULL DEFAULT 0,
+			http_status INT NOT NULL DEFAULT 0,
+			error_text TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)`,
+		`CREATE INDEX IF NOT EXISTS ai_call_log_user ON ai_call_log(user_id, created_at)`,
+		`CREATE INDEX IF NOT EXISTS ai_call_log_job ON ai_call_log(job_id)`,
 		`CREATE TABLE IF NOT EXISTS analysis_cache (
 			cache_key TEXT PRIMARY KEY,
 			analysis_id TEXT NOT NULL,

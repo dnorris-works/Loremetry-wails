@@ -17,6 +17,7 @@ import (
 	"loremetry/internal/apiserver/billing"
 	"loremetry/internal/apiserver/cache"
 	"loremetry/internal/apiserver/db"
+	"loremetry/internal/apiserver/journal"
 	"loremetry/internal/apiserver/ledger"
 	"loremetry/internal/apiserver/models"
 	"loremetry/internal/apiserver/queue"
@@ -57,11 +58,13 @@ func main() {
 		}
 	}
 
+	jrnl := journal.New(sqlDB)
+
 	var jobSvc *queue.Service
 	if sqlDB != nil {
-		jobSvc = queue.NewPostgres(sqlDB, ledgerStore, cacheStore, gw)
+		jobSvc = queue.NewPostgres(sqlDB, ledgerStore, cacheStore, gw, jrnl)
 	} else {
-		jobSvc = queue.NewMemory(ledgerStore, cacheStore, gw)
+		jobSvc = queue.NewMemory(ledgerStore, cacheStore, gw, jrnl)
 	}
 
 	s := &server{

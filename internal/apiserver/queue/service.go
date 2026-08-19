@@ -13,6 +13,7 @@ import (
 
 	"loremetry/internal/apiserver/analysis"
 	"loremetry/internal/apiserver/cache"
+	"loremetry/internal/apiserver/journal"
 	"loremetry/internal/apiserver/ledger"
 	"loremetry/internal/apiserver/models"
 )
@@ -49,30 +50,30 @@ type Service struct {
 	ledger   *ledger.Ledger
 	cache    *cache.Store
 	gateway  models.Gateway
-	runner   analysis.Runner
+	journal  *journal.Logger
 	workers  *Workers
 }
 
-func NewMemory(ledger *ledger.Ledger, cacheStore *cache.Store, gw models.Gateway) *Service {
+func NewMemory(ledger *ledger.Ledger, cacheStore *cache.Store, gw models.Gateway, jrnl *journal.Logger) *Service {
 	s := &Service{
 		jobs:    map[string]*Job{},
 		ledger:  ledger,
 		cache:   cacheStore,
 		gateway: gw,
-		runner:  analysis.Runner{Gateway: gw},
+		journal: jrnl,
 	}
 	s.workers = NewWorkers(s)
 	s.workers.Start()
 	return s
 }
 
-func NewPostgres(db *sql.DB, ledger *ledger.Ledger, cacheStore *cache.Store, gw models.Gateway) *Service {
+func NewPostgres(db *sql.DB, ledger *ledger.Ledger, cacheStore *cache.Store, gw models.Gateway, jrnl *journal.Logger) *Service {
 	s := &Service{
 		db:      db,
 		ledger:  ledger,
 		cache:   cacheStore,
 		gateway: gw,
-		runner:  analysis.Runner{Gateway: gw},
+		journal: jrnl,
 	}
 	s.workers = NewWorkers(s)
 	s.workers.Start()
@@ -228,11 +229,27 @@ func (s *Service) finish(j *Job, body string, err error) {
 func (s *Service) runJob(j *Job) {
 	ctx := context.Background()
 	j.Step = 1
-	body, err := s.runner.Run(ctx, j.AnalysisID, j.Sources)
+	gw := s.loggingGateway(j)
+	runner := analysis.Runner{Gateway: gw}
+	body, err := runner.Run(ctx, j.AnalysisID, j.Sources)
 	for step := 2; step <= j.StepTotal; step++ {
 		j.Step = step
 	}
 	s.finish(j, body, err)
+}
+
+func (s *Service) loggingGateway(j *Job) models.Gateway {
+	if s.journal == nil {
+		return s.gateway
+	}
+	return &journal.LoggingGateway{
+		Inner:      s.gateway,
+		Journal:    s.journal,
+		UserID:     j.UserID,
+		JobID:      j.ID,
+		AnalysisID: j.AnalysisID,
+		StepName:   "pipeline",
+	}
 }
 
 func (s *Service) insertDB(j *Job) error {
