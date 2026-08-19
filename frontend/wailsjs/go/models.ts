@@ -703,6 +703,100 @@ export namespace store {
 	        this.storage = source["storage"];
 	    }
 	}
+	export class FileRange {
+	    dir: string;
+	    name: string;
+	    text: string;
+	    start: number;
+	    end: number;
+	    file_size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileRange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.text = source["text"];
+	        this.start = source["start"];
+	        this.end = source["end"];
+	        this.file_size = source["file_size"];
+	    }
+	}
+	export class FileSection {
+	    index: number;
+	    title: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileSection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.title = source["title"];
+	    }
+	}
+	export class FileSectionContent {
+	    dir: string;
+	    name: string;
+	    index: number;
+	    title: string;
+	    text: string;
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileSectionContent(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.index = source["index"];
+	        this.title = source["title"];
+	        this.text = source["text"];
+	        this.total = source["total"];
+	    }
+	}
+	export class FileSections {
+	    dir: string;
+	    name: string;
+	    sections: FileSection[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileSections(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.sections = this.convertValues(source["sections"], FileSection);
+	        this.total = source["total"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class FolderChange {
 	    type: string;
 	    id: number;
@@ -957,6 +1051,26 @@ export namespace store {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.names = source["names"];
+	    }
+	}
+	export class OpenedFile {
+	    dir: string;
+	    name: string;
+	    text?: string;
+	    large: boolean;
+	    file_size?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OpenedFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.dir = source["dir"];
+	        this.name = source["name"];
+	        this.text = source["text"];
+	        this.large = source["large"];
+	        this.file_size = source["file_size"];
 	    }
 	}
 	export class PathResult {

@@ -287,6 +287,30 @@ func (a *App) ReadDiskFile(dir string, name string) (store.DiskFile, error) {
 	return store.ReadDiskFile(dir, name)
 }
 
+func (a *App) OpenDiskFile(dir string, name string) (store.OpenedFile, error) {
+	return store.OpenDiskFile(dir, name)
+}
+
+func (a *App) ReadDiskFileRange(dir string, name string, offset int64, limit int) (store.FileRange, error) {
+	return store.ReadDiskFileRange(dir, name, offset, limit)
+}
+
+func (a *App) NeedsChunking(dir string, name string) bool {
+	return store.NeedsChunking(dir, name)
+}
+
+func (a *App) ReadDiskFileSections(dir string, name string) (store.FileSections, error) {
+	return store.ReadDiskFileSections(dir, name)
+}
+
+func (a *App) ReadDiskFileSection(dir string, name string, index int) (store.FileSectionContent, error) {
+	return store.ReadDiskFileSection(dir, name, index)
+}
+
+func (a *App) WriteDiskFileSection(dir string, name string, index int, text string) (store.DiskFile, error) {
+	return store.WriteDiskFileSection(dir, name, index, text)
+}
+
 func (a *App) WriteDiskFile(in store.DiskFileWrite) (store.DiskFile, error) {
 	return store.WriteDiskFile(in)
 }
@@ -387,6 +411,14 @@ func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
 		return store.AnalysisReport{}, err
 	}
 	return s.GetAnalysisReport(id)
+}
+
+func (a *App) DeleteAnalysisReport(id int64) error {
+	s, err := a.ready()
+	if err != nil {
+		return err
+	}
+	return s.DeleteAnalysisReport(id)
 }
 
 func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, error) {

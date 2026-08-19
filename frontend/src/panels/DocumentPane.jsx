@@ -3,6 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { LexicalEditor } from '@/editor/LexicalEditor';
+import { LargeFileViewer } from '@/editor/LargeFileViewer';
 import { AnalysisPane, ReportPane } from '@/panels/AnalysisPane';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ export function DocumentPane() {
     const [draft, setDraft] = useState('');
     const [editorNonce, setEditorNonce] = useState(0);
     const [reloadTick, setReloadTick] = useState(0);
+    const [largeFile, setLargeFile] = useState(null);
     const key = selectionKey(selection);
     const dirty = !!loaded && (title !== loaded.title || draft !== loaded.markdown);
     const reloadFromDisk = useCallback(() => setReloadTick((n) => n + 1), []);
@@ -56,24 +58,36 @@ export function DocumentPane() {
         let cancelled = false;
         async function load() {
             if (selection.type !== 'file') {
-                if (!cancelled)
+                if (!cancelled) {
                     setLoaded(null);
+                    setLargeFile(null);
+                }
                 return;
             }
-            if (!cancelled)
+            if (!cancelled) {
                 setLoaded(null);
+                setLargeFile(null);
+            }
             try {
-                const doc = await api.readDiskFile(selection.dir, selection.name);
+                const opened = await api.openDiskFile(selection.dir, selection.name);
                 if (cancelled)
                     return;
-                setLoaded({ key, markdown: doc.text || '', title: doc.name });
-                setTitle(doc.name);
-                setDraft(doc.text || '');
-                setEditorNonce((n) => n + 1);
+                if (opened.large) {
+                    setLargeFile({ dir: selection.dir, name: opened.name, fileSize: opened.file_size || opened.fileSize });
+                    setLoaded({ key, markdown: '', title: opened.name });
+                    setTitle(opened.name);
+                } else {
+                    setLargeFile(null);
+                    setLoaded({ key, markdown: opened.text || '', title: opened.name });
+                    setTitle(opened.name);
+                    setDraft(opened.text || '');
+                    setEditorNonce((n) => n + 1);
+                }
             }
             catch {
                 if (!cancelled) {
                     setLoaded(null);
+                    setLargeFile(null);
                     if (reloadTick)
                         setSelection({ type: 'empty' });
                 }
@@ -85,7 +99,7 @@ export function DocumentPane() {
         };
     }, [key, reloadTick]);
     async function close() {
-        if (dirty && !(await confirm('Discard unsaved changes?')))
+        if (!largeFile && dirty && !(await confirm('Discard unsaved changes?')))
             return;
         setSelection({ type: 'empty' });
     }
@@ -143,6 +157,25 @@ export function DocumentPane() {
     }
     if (!loaded || loaded.key !== key) {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+    }
+    if (largeFile) {
+        return (<div className="flex h-full flex-col">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">{title}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {Math.round(largeFile.fileSize / 1024)} KB — read-only (large file)
+              </div>
+            </div>
+            <Button size="sm" variant="destructive" onClick={() => void remove()}>Delete</Button>
+            <Button size="icon" variant="ghost" onClick={() => void close()} title="Close">
+              <X className="h-4 w-4"/>
+            </Button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <LargeFileViewer dir={largeFile.dir} name={largeFile.name} fileSize={largeFile.fileSize}/>
+          </div>
+        </div>);
     }
     return (<div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">

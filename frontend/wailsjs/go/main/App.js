@@ -90,6 +90,10 @@ export function DeleteAct(arg1) {
   return window['go']['main']['App']['DeleteAct'](arg1);
 }
 
+export function DeleteAnalysisReport(arg1) {
+  return window['go']['main']['App']['DeleteAnalysisReport'](arg1);
+}
+
 export function DeleteChapter(arg1) {
   return window['go']['main']['App']['DeleteChapter'](arg1);
 }
@@ -270,8 +274,16 @@ export function MatchAnalysisSources(arg1) {
   return window['go']['main']['App']['MatchAnalysisSources'](arg1);
 }
 
+export function NeedsChunking(arg1, arg2) {
+  return window['go']['main']['App']['NeedsChunking'](arg1, arg2);
+}
+
 export function OpenBillingCheckout() {
   return window['go']['main']['App']['OpenBillingCheckout']();
+}
+
+export function OpenDiskFile(arg1, arg2) {
+  return window['go']['main']['App']['OpenDiskFile'](arg1, arg2);
 }
 
 export function PickImportFolder() {
@@ -296,6 +308,18 @@ export function PutSetting(arg1, arg2) {
 
 export function ReadDiskFile(arg1, arg2) {
   return window['go']['main']['App']['ReadDiskFile'](arg1, arg2);
+}
+
+export function ReadDiskFileRange(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ReadDiskFileRange'](arg1, arg2, arg3, arg4);
+}
+
+export function ReadDiskFileSection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ReadDiskFileSection'](arg1, arg2, arg3);
+}
+
+export function ReadDiskFileSections(arg1, arg2) {
+  return window['go']['main']['App']['ReadDiskFileSections'](arg1, arg2);
 }
 
 export function ReadHeaderFile(arg1) {
@@ -416,6 +440,10 @@ export function UpdateStory(arg1, arg2) {
 
 export function WriteDiskFile(arg1) {
   return window['go']['main']['App']['WriteDiskFile'](arg1);
+}
+
+export function WriteDiskFileSection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['WriteDiskFileSection'](arg1, arg2, arg3, arg4);
 }
 
 export function WriteHeaderFile(arg1) {

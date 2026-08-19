@@ -48,6 +48,8 @@ export function CreateWritingSeries(arg1:store.WritingProjectInput):Promise<stor
 
 export function DeleteAct(arg1:number):Promise<store.DeletedResult>;
 
+export function DeleteAnalysisReport(arg1:number):Promise<void>;
+
 export function DeleteChapter(arg1:number):Promise<store.DeletedResult>;
 
 export function DeleteCharacter(arg1:number):Promise<store.DeletedResult>;
@@ -138,7 +140,11 @@ export function ListWritingTree():Promise<store.WritingTree>;
 
 export function MatchAnalysisSources(arg1:string):Promise<store.AnalysisSources>;
 
+export function NeedsChunking(arg1:string,arg2:string):Promise<boolean>;
+
 export function OpenBillingCheckout():Promise<void>;
+
+export function OpenDiskFile(arg1:string,arg2:string):Promise<store.OpenedFile>;
 
 export function PickImportFolder():Promise<string>;
 
@@ -151,6 +157,12 @@ export function PlaceStoryDoc(arg1:number,arg2:store.PlaceInput):Promise<store.U
 export function PutSetting(arg1:string,arg2:string):Promise<store.SettingValue>;
 
 export function ReadDiskFile(arg1:string,arg2:string):Promise<store.DiskFile>;
+
+export function ReadDiskFileRange(arg1:string,arg2:string,arg3:number,arg4:number):Promise<store.FileRange>;
+
+export function ReadDiskFileSection(arg1:string,arg2:string,arg3:number):Promise<store.FileSectionContent>;
+
+export function ReadDiskFileSections(arg1:string,arg2:string):Promise<store.FileSections>;
 
 export function ReadHeaderFile(arg1:store.HeaderFileRef):Promise<store.HeaderFileContent>;
 
@@ -211,5 +223,7 @@ export function UpdateSeriesDoc(arg1:number,arg2:store.SeriesDocInput):Promise<s
 export function UpdateStory(arg1:number,arg2:store.StoryInput):Promise<store.UpdatedResult>;
 
 export function WriteDiskFile(arg1:store.DiskFileWrite):Promise<store.DiskFile>;
+
+export function WriteDiskFileSection(arg1:string,arg2:string,arg3:number,arg4:string):Promise<store.DiskFile>;
 
 export function WriteHeaderFile(arg1:store.HeaderFileWrite):Promise<store.HeaderFile>;

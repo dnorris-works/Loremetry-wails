@@ -3,7 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, Plus, Settings, Database, Moon, Sun, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Check, Pencil, Plus, Settings, Database, Moon, Sun, Trash2, Eye, EyeOff } from 'lucide-react';
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
@@ -11,7 +11,8 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
-    const { setSelection, analysisId, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
+    const { selection, setSelection, analysisId, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
+    const hasProject = !!(selection?.dir);
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
     const [analysisGroups, setAnalysisGroups] = useState([]);
@@ -39,6 +40,10 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         await persistTheme(next, isAuthenticated());
     }
     const [tab, setTab] = useState('projects');
+    const [hideAI, setHideAI] = useState(false);
+    useEffect(() => {
+        if (!hasProject && tab === 'analysis') setTab('projects');
+    }, [hasProject, tab]);
     const pens = tree.pens || [];
     return (<div className="flex h-full flex-col bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -59,7 +64,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'projects' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('projects')}>
           Projects
         </button>
-        <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'analysis' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('analysis')}>
+        <button type="button" disabled={!hasProject} title={hasProject ? undefined : 'Select a book or series in Projects first'} className={`flex-1 px-2 py-1.5 text-xs font-medium ${!hasProject ? 'cursor-not-allowed opacity-40' : ''} ${tab === 'analysis' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => hasProject && setTab('analysis')}>
           Analysis
         </button>
         <button type="button" className={`flex-1 px-2 py-1.5 text-xs font-medium ${tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setTab('reports')}>
@@ -67,21 +72,38 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         </button>
       </div>
       <div className="flex-1 overflow-auto p-2">
-        {tab === 'analysis' && analysisGroups.map((g) => (<div key={g.id} className="mb-3">
-          <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
-          {(g.items || []).map((item) => {
-            const ai = !!(item.uses_ai ?? item.usesAI);
-            return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
-          </button>);
+        {tab === 'analysis' && (<>
+          <div className="mb-2 flex items-center gap-1.5 px-1">
+            <button type="button" className={`relative h-4 w-7 rounded-full transition-colors ${hideAI ? 'bg-muted' : 'bg-primary'}`} onClick={() => setHideAI((v) => !v)} title={hideAI ? 'Show AI analyses' : 'Hide AI analyses'}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${hideAI ? 'left-0.5' : 'left-3.5'}`}/>
+            </button>
+            <span className="text-[10px] text-muted-foreground">{hideAI ? 'Local only' : 'All analyses'}</span>
+          </div>
+          {analysisGroups.map((g) => {
+            const items = (g.items || []).filter((item) => !hideAI || !(item.uses_ai ?? item.usesAI));
+            if (items.length === 0) return null;
+            return (<div key={g.id} className="mb-3">
+              <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
+              {items.map((item) => {
+                const ai = !!(item.uses_ai ?? item.usesAI);
+                return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
+                </button>);
+              })}
+            </div>);
           })}
-        </div>))}
+        </>)}
         {tab === 'reports' && (reports.length === 0 ? (<p className="px-1 text-xs text-muted-foreground">No saved reports yet.</p>) : reports.map((r) => (
-          <button key={r.id} type="button" className={`mb-1 w-full truncate px-1 py-0.5 text-left text-xs hover:bg-accent ${reportId === r.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setReport(r.id)}>
-            {r.analysis_label || r.analysisLabel}
-            <span className="block truncate text-[10px] text-muted-foreground">{r.created_at || r.createdAt}</span>
-          </button>
+          <div key={r.id} className="group mb-1 flex items-start">
+            <button type="button" className={`min-w-0 flex-1 truncate px-1 py-0.5 text-left text-xs hover:bg-accent ${reportId === r.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setReport(r.id)}>
+              {r.analysis_label || r.analysisLabel}
+              <span className="block truncate text-[10px] text-muted-foreground">{r.created_at || r.createdAt}</span>
+            </button>
+            <button type="button" className="shrink-0 p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100" title="Delete report" onClick={async () => { if (await confirm('Delete this report?')) { await api.deleteAnalysisReport(r.id); if (reportId === r.id) setReport(0); bumpRefresh(); } }}>
+              <Trash2 className="h-3 w-3"/>
+            </button>
+          </div>
         )))}
         {tab === 'projects' && (<>
         {(tree.problems || []).map((p) => (<p key={p.path || p.message} className="mb-2 px-1 text-[11px] text-destructive">{p.message}</p>))}
@@ -105,9 +127,12 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                   <Plus className="h-3 w-3"/>
                 </Button>
               </div>
-              {seriesOpen && (pen.series || []).map((s) => (<div key={s.path}>
+              {seriesOpen && (pen.series || []).map((s) => {
+                const selected = selection?.dir === s.path;
+                return (<div key={s.path}>
                   <div className="flex h-6 items-center">
-                    <button type="button" className="flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight text-teal-700 hover:bg-accent dark:text-teal-400" onClick={() => toggleSeries(s.path)}>
+                    {selected && <Check className="h-3 w-3 shrink-0 text-green-600 dark:text-green-400"/>}
+                    <button type="button" className={`flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight hover:bg-accent ${selected ? 'font-medium text-teal-800 dark:text-teal-300' : 'text-teal-700 dark:text-teal-400'}`} onClick={async () => { await setSelection({ type: 'file', dir: s.path, name: s.name }); toggleSeries(s.path); }}>
                       {s.name}
                     </button>
                     <Button size="icon" variant="ghost" className="h-5 w-5" title="Add story" onClick={() => onNewStory(s.path, pen.name, pen.path)}>
@@ -127,7 +152,8 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                           bumpRefresh();
                       }}/>))}
                     </div>)}
-                </div>))}
+                </div>);
+              })}
               <div className="flex h-5 items-center justify-between">
                 <button type="button" className="min-w-0 flex-1 truncate text-left text-[10px] uppercase leading-none text-muted-foreground hover:bg-accent" onClick={() => toggleFolder(pen.path + '|stories')}>
                   Stories
@@ -136,9 +162,12 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                   <Plus className="h-3 w-3"/>
                 </Button>
               </div>
-              {storiesOpen && (pen.books || []).map((st) => (<div key={st.path}>
+              {storiesOpen && (pen.books || []).map((st) => {
+                const selected = selection?.dir === st.path;
+                return (<div key={st.path}>
                   <div className="flex h-6 items-center">
-                    <button type="button" className="flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight text-blue-800 hover:bg-accent dark:text-blue-300" onClick={() => toggleStory(st.path)}>
+                    {selected && <Check className="h-3 w-3 shrink-0 text-green-600 dark:text-green-400"/>}
+                    <button type="button" className={`flex-1 truncate rounded px-1 py-0 text-left text-sm font-normal leading-tight hover:bg-accent ${selected ? 'font-medium text-blue-900 dark:text-blue-200' : 'text-blue-800 dark:text-blue-300'}`} onClick={async () => { await setSelection({ type: 'file', dir: st.path, name: st.name }); toggleStory(st.path); }}>
                       {st.name}
                     </button>
                     <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => onEditStory(st.path, st.name)}>
@@ -154,7 +183,8 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                           bumpRefresh();
                       }}/>))}
                     </div>)}
-                </div>))}
+                </div>);
+              })}
             </div>}
           </div>);
         })}

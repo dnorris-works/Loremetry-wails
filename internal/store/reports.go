@@ -65,3 +65,8 @@ func (s *Store) ListAnalysisReports() ([]AnalysisReport, error) {
 	}
 	return out, rows.Err()
 }
+
+func (s *Store) DeleteAnalysisReport(id int64) error {
+	_, err := s.DB.Exec(`DELETE FROM analysis_reports WHERE id = ? AND user_id = ?`, id, s.UserID)
+	return err
+}
