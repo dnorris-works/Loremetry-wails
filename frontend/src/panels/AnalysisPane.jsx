@@ -8,10 +8,25 @@ function usesAI(detail) {
     return !!(detail?.uses_ai ?? detail?.usesAI);
 }
 
+function progressLabel(status, step, stepTotal) {
+    if (status === 'queued')
+        return 'Queued…';
+    if (status === 'running' && stepTotal > 1)
+        return `Step ${step} of ${stepTotal}…`;
+    if (status === 'running')
+        return 'Running…';
+    return 'Running…';
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function AnalysisPane() {
     const { analysisId, setAnalysis, selection, bumpRefresh } = useAppState();
     const [detail, setDetail] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [progress, setProgress] = useState('');
     const [body, setBody] = useState('');
     const [notice, setNotice] = useState('');
     const [sources, setSources] = useState(null);
@@ -23,6 +38,7 @@ export function AnalysisPane() {
         }
         setBody('');
         setNotice('');
+        setProgress('');
         let cancelled = false;
         void api.getAnalysis(analysisId).then((d) => {
             if (!cancelled)
@@ -50,13 +66,42 @@ export function AnalysisPane() {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
     }
     const ai = usesAI(detail);
+    async function runLocal() {
+        const report = await api.runAnalysis(detail.id, projectPath);
+        setBody(report.body || '');
+        bumpRefresh();
+    }
+    async function runAI() {
+        let job = await api.startAnalysisJob(detail.id, projectPath);
+        if (job.cached || job.status === 'done') {
+            const report = await api.saveAnalysisJobReport(detail.id, projectPath, job.body || '');
+            setBody(report.body || '');
+            bumpRefresh();
+            return;
+        }
+        const jobID = job.job_id || job.jobId;
+        while (job.status !== 'done' && job.status !== 'failed') {
+            setProgress(progressLabel(job.status, job.step, job.step_total || job.stepTotal));
+            await sleep(2000);
+            job = await api.getAnalysisJobStatus(jobID);
+        }
+        if (job.status === 'failed') {
+            throw new Error(job.error || 'Analysis failed');
+        }
+        const report = await api.saveAnalysisJobReport(detail.id, projectPath, job.body || '');
+        setBody(report.body || '');
+        bumpRefresh();
+    }
     async function run() {
         setBusy(true);
         setNotice('');
+        setProgress('');
         try {
-            const report = await api.runAnalysis(detail.id, projectPath);
-            setBody(report.body || '');
-            bumpRefresh();
+            if (ai) {
+                await runAI();
+            } else {
+                await runLocal();
+            }
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : 'Could not run analysis';
@@ -64,14 +109,18 @@ export function AnalysisPane() {
                 setNotice('This analysis uses AI. Choose a plan / add credits.');
             } else if (msg.includes('CREDITS_EMPTY')) {
                 setNotice('This month’s credits are used up.');
+            } else if (msg.includes('CONCURRENT_LIMIT')) {
+                setNotice('Another analysis is already running. Wait or upgrade your plan.');
             } else {
                 setNotice(msg);
             }
         }
         finally {
             setBusy(false);
+            setProgress('');
         }
     }
+    const busyLabel = progress || (busy ? 'Running…' : 'Run');
     return (<div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <div className="min-w-0 flex-1">
@@ -84,7 +133,7 @@ export function AnalysisPane() {
           <div className="truncate text-[11px] text-muted-foreground">{detail.group}</div>
         </div>
         <Button size="sm" onClick={() => void run()} disabled={busy}>
-          {busy ? 'Running…' : 'Run'}
+          {busyLabel}
         </Button>
         <Button size="icon" variant="ghost" onClick={() => setAnalysis('')} title="Close">
           <X className="h-4 w-4"/>

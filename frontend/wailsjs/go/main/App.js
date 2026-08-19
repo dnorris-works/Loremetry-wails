@@ -30,6 +30,10 @@ export function ClearHeaderOverride(arg1, arg2) {
   return window['go']['main']['App']['ClearHeaderOverride'](arg1, arg2);
 }
 
+export function ConnectCloudAccount(arg1) {
+  return window['go']['main']['App']['ConnectCloudAccount'](arg1);
+}
+
 export function CreateAct(arg1, arg2) {
   return window['go']['main']['App']['CreateAct'](arg1, arg2);
 }
@@ -138,12 +142,12 @@ export function GetAnalysis(arg1) {
   return window['go']['main']['App']['GetAnalysis'](arg1);
 }
 
-export function GetAnalysisReport(arg1) {
-  return window['go']['main']['App']['GetAnalysisReport'](arg1);
+export function GetAnalysisJobStatus(arg1) {
+  return window['go']['main']['App']['GetAnalysisJobStatus'](arg1);
 }
 
-export function GetCloudAccount() {
-  return window['go']['main']['App']['GetCloudAccount']();
+export function GetAnalysisReport(arg1) {
+  return window['go']['main']['App']['GetAnalysisReport'](arg1);
 }
 
 export function GetChapter(arg1) {
@@ -152,6 +156,10 @@ export function GetChapter(arg1) {
 
 export function GetCharacter(arg1) {
   return window['go']['main']['App']['GetCharacter'](arg1);
+}
+
+export function GetCloudAccount() {
+  return window['go']['main']['App']['GetCloudAccount']();
 }
 
 export function GetDraftSection() {
@@ -182,6 +190,10 @@ export function GetUISession() {
   return window['go']['main']['App']['GetUISession']();
 }
 
+export function HasCloudAccount() {
+  return window['go']['main']['App']['HasCloudAccount']();
+}
+
 export function ImportDiskFiles(arg1, arg2) {
   return window['go']['main']['App']['ImportDiskFiles'](arg1, arg2);
 }
@@ -190,12 +202,12 @@ export function ListActs(arg1) {
   return window['go']['main']['App']['ListActs'](arg1);
 }
 
-export function ListAnalysisReports() {
-  return window['go']['main']['App']['ListAnalysisReports']();
-}
-
 export function ListAnalysisCatalog() {
   return window['go']['main']['App']['ListAnalysisCatalog']();
+}
+
+export function ListAnalysisReports() {
+  return window['go']['main']['App']['ListAnalysisReports']();
 }
 
 export function ListChapters(arg1) {
@@ -258,6 +270,10 @@ export function MatchAnalysisSources(arg1) {
   return window['go']['main']['App']['MatchAnalysisSources'](arg1);
 }
 
+export function OpenBillingCheckout() {
+  return window['go']['main']['App']['OpenBillingCheckout']();
+}
+
 export function PickImportFolder() {
   return window['go']['main']['App']['PickImportFolder']();
 }
@@ -306,20 +322,12 @@ export function ReorderStories(arg1, arg2) {
   return window['go']['main']['App']['ReorderStories'](arg1, arg2);
 }
 
-export function OpenBillingCheckout() {
-  return window['go']['main']['App']['OpenBillingCheckout']();
-}
-
-export function ConnectCloudAccount(arg1) {
-  return window['go']['main']['App']['ConnectCloudAccount'](arg1);
-}
-
-export function HasCloudAccount() {
-  return window['go']['main']['App']['HasCloudAccount']();
-}
-
 export function RunAnalysis(arg1, arg2) {
   return window['go']['main']['App']['RunAnalysis'](arg1, arg2);
+}
+
+export function SaveAnalysisJobReport(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveAnalysisJobReport'](arg1, arg2, arg3);
 }
 
 export function SetDraftSection(arg1, arg2) {
@@ -356,6 +364,10 @@ export function SetShowHiddenFolders(arg1) {
 
 export function SetUISelection(arg1, arg2) {
   return window['go']['main']['App']['SetUISelection'](arg1, arg2);
+}
+
+export function StartAnalysisJob(arg1, arg2) {
+  return window['go']['main']['App']['StartAnalysisJob'](arg1, arg2);
 }
 
 export function SyncAllFolders() {

@@ -11,16 +11,22 @@ import (
 
 	"loremetry/internal/apiserver/auth"
 	"loremetry/internal/apiserver/billing"
+	"loremetry/internal/apiserver/cache"
 	"loremetry/internal/apiserver/ledger"
 	"loremetry/internal/apiserver/models"
+	"loremetry/internal/apiserver/queue"
 )
 
 func testServer() *server {
+	gw := models.Stub{}
+	ledgerStore := ledger.New()
+	cacheStore := cache.NewMemory()
 	return &server{
 		auth:    auth.New(),
 		bill:    billing.Fake{Site: "http://example"},
-		ledger:  ledger.New(),
-		gateway: models.Stub{},
+		ledger:  ledgerStore,
+		gateway: gw,
+		jobs:    queue.NewMemory(ledgerStore, cacheStore, gw),
 	}
 }
 

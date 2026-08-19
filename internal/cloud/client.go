@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -41,6 +42,18 @@ type RunRequest struct {
 type RunResponse struct {
 	Body    string `json:"body"`
 	Credits int    `json:"credits"`
+	Cached  bool   `json:"cached"`
+}
+
+type JobStatus struct {
+	JobID     string `json:"job_id"`
+	Status    string `json:"status"`
+	Step      int    `json:"step"`
+	StepTotal int    `json:"step_total"`
+	Body      string `json:"body"`
+	Error     string `json:"error"`
+	Credits   int    `json:"credits"`
+	Cached    bool   `json:"cached"`
 }
 
 type APIError struct {
@@ -70,7 +83,7 @@ func New(baseURL, token string) *Client {
 	return &Client{
 		BaseURL: baseURL,
 		Token:   strings.TrimSpace(token),
-		HTTP:    &http.Client{Timeout: 120 * time.Second},
+		HTTP:    &http.Client{Timeout: 600 * time.Second},
 	}
 }
 
@@ -81,11 +94,11 @@ func (c *Client) GetAccount() (Account, error) {
 }
 
 func RegisterDevice(baseURL, email string) (string, error) {
-	c := New(baseURL, "")
+	cli := New(baseURL, "")
 	var out struct {
 		Token string `json:"token"`
 	}
-	if err := c.postPublic("/auth/device", map[string]string{"email": email}, &out); err != nil {
+	if err := cli.postPublic("/auth/device", map[string]string{"email": email}, &out); err != nil {
 		return "", err
 	}
 	token := strings.TrimSpace(out.Token)
@@ -101,10 +114,54 @@ func (c *Client) Checkout() (CheckoutResponse, error) {
 	return out, err
 }
 
-func (c *Client) RunAnalysis(analysisID string, sources []RoleText) (RunResponse, error) {
-	var out RunResponse
-	err := c.do("POST", "/analysis/run", RunRequest{AnalysisID: analysisID, Sources: sources}, &out)
+func (c *Client) SubmitAnalysisJob(analysisID string, sources []RoleText) (JobStatus, error) {
+	var out JobStatus
+	err := c.do("POST", "/analysis/jobs", RunRequest{AnalysisID: analysisID, Sources: sources}, &out)
 	return out, err
+}
+
+func (c *Client) GetAnalysisJob(jobID string) (JobStatus, error) {
+	var out JobStatus
+	err := c.do("GET", "/analysis/jobs/"+jobID, nil, &out)
+	return out, err
+}
+
+func (c *Client) RunAnalysis(analysisID string, sources []RoleText) (RunResponse, error) {
+	job, err := c.SubmitAnalysisJob(analysisID, sources)
+	if err != nil {
+		return RunResponse{}, err
+	}
+	if job.Cached || job.Status == "done" {
+		return RunResponse{Body: job.Body, Credits: job.Credits, Cached: job.Cached}, nil
+	}
+	job, err = c.waitJob(context.Background(), job.JobID)
+	if err != nil {
+		return RunResponse{}, err
+	}
+	if job.Status == "failed" {
+		if job.Error != "" {
+			return RunResponse{}, fmt.Errorf("%s", job.Error)
+		}
+		return RunResponse{}, fmt.Errorf("analysis failed")
+	}
+	return RunResponse{Body: job.Body, Credits: job.Credits, Cached: job.Cached}, nil
+}
+
+func (c *Client) waitJob(ctx context.Context, jobID string) (JobStatus, error) {
+	for {
+		job, err := c.GetAnalysisJob(jobID)
+		if err != nil {
+			return JobStatus{}, err
+		}
+		if job.Status == "done" || job.Status == "failed" {
+			return job, nil
+		}
+		select {
+		case <-ctx.Done():
+			return job, ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
 }
 
 func (c *Client) do(method, path string, body any, dest any) error {
@@ -153,6 +210,10 @@ func (c *Client) request(method, path string, body any, dest any, auth bool) err
 	}
 	if res.StatusCode == 401 {
 		return APIError{Status: 401, Code: "PLAN_REQUIRED", Message: parseMessage(raw, "This analysis uses AI. Choose a plan / add credits.")}
+	}
+	if res.StatusCode == 429 {
+		code := parseCode(raw, "CONCURRENT_LIMIT")
+		return APIError{Status: 429, Code: code, Message: parseMessage(raw, "Another analysis is already running.")}
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("%s", parseMessage(raw, fmt.Sprintf("cloud API %d", res.StatusCode)))

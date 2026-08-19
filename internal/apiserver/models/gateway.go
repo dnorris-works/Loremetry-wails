@@ -7,47 +7,143 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
 
+type Tier int
+
+const (
+	TierFast Tier = iota
+	TierStrong
+)
+
+type Usage struct {
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+}
+
 type Gateway interface {
-	Complete(ctx context.Context, system, user string) (string, error)
+	Complete(ctx context.Context, tier Tier, system, user string) (string, Usage, error)
 }
 
 type Stub struct{}
 
-func (Stub) Complete(_ context.Context, _, user string) (string, error) {
+func (Stub) Complete(_ context.Context, _ Tier, _, user string) (string, Usage, error) {
 	snip := strings.TrimSpace(user)
 	if len(snip) > 240 {
 		snip = snip[:240] + "…"
 	}
-	return "# AI analysis (stub)\n\nNo model key is configured. This is a placeholder report so the desktop path can be tested.\n\n" + snip + "\n", nil
+	return "# AI analysis (stub)\n\nNo model key is configured. This is a placeholder report so the desktop path can be tested.\n\n" + snip + "\n", Usage{}, nil
 }
 
 type OpenAICompat struct {
-	BaseURL string
-	APIKey  string
-	Model   string
-	HTTP    *http.Client
+	BaseURL    string
+	APIKey     string
+	FastModel  string
+	StrongModel string
+	Temperature float64
+	HTTP       *http.Client
 }
 
-func NewOpenAICompat(baseURL, apiKey, model string) *OpenAICompat {
+const (
+	defaultFireworksBase = "https://api.fireworks.ai/inference/v1"
+	defaultFastModel     = "accounts/fireworks/models/llama-v3p1-8b-instruct"
+	defaultStrongModel   = "accounts/fireworks/models/llama-v3p3-70b-instruct"
+)
+
+func NewFromEnv() Gateway {
+	key := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_API_KEY"))
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("FIREWORKS_API_KEY"))
+	}
+	base := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_BASE_URL"))
+	if base == "" && key != "" {
+		base = defaultFireworksBase
+	}
+	if base == "" {
+		return Stub{}
+	}
+	fast := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_FAST"))
+	if fast == "" {
+		fast = strings.TrimSpace(os.Getenv("LOREMETRY_MODEL"))
+	}
+	if fast == "" {
+		fast = defaultFastModel
+	}
+	strong := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_STRONG"))
+	if strong == "" {
+		strong = defaultStrongModel
+	}
+	return NewOpenAICompat(base, key, fast, strong, 0.4)
+}
+
+func NewOpenAICompat(baseURL, apiKey, fastModel, strongModel string, temperature float64) *OpenAICompat {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	if model == "" {
-		model = "gpt-4o-mini"
+	if temperature <= 0 {
+		temperature = 0.4
+	}
+	if fastModel == "" {
+		fastModel = defaultFastModel
+	}
+	if strongModel == "" {
+		strongModel = defaultStrongModel
 	}
 	return &OpenAICompat{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		Model:   model,
-		HTTP:    &http.Client{Timeout: 120 * time.Second},
+		BaseURL:     baseURL,
+		APIKey:      apiKey,
+		FastModel:   fastModel,
+		StrongModel: strongModel,
+		Temperature: temperature,
+		HTTP:        &http.Client{Timeout: 300 * time.Second},
 	}
 }
 
-func (g *OpenAICompat) Complete(ctx context.Context, system, user string) (string, error) {
+func (g *OpenAICompat) model(t Tier) string {
+	if t == TierFast {
+		return g.FastModel
+	}
+	return g.StrongModel
+}
+
+func (g *OpenAICompat) Complete(ctx context.Context, tier Tier, system, user string) (string, Usage, error) {
+	var lastErr error
+	backoff := 500 * time.Millisecond
+	for attempt := 0; attempt < 5; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return "", Usage{}, ctx.Err()
+			case <-time.After(backoff):
+			}
+			backoff *= 2
+			if backoff > 30*time.Second {
+				backoff = 30 * time.Second
+			}
+		}
+		body, usage, err := g.completeOnce(ctx, tier, system, user)
+		if err == nil {
+			return body, usage, nil
+		}
+		lastErr = err
+		if !retryable(err) {
+			break
+		}
+	}
+	return "", Usage{}, lastErr
+}
+
+func retryable(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "429") || strings.Contains(s, "503")
+}
+
+func (g *OpenAICompat) completeOnce(ctx context.Context, tier Tier, system, user string) (string, Usage, error) {
 	payload := map[string]any{
-		"model": g.Model,
+		"model":       g.model(tier),
+		"temperature": g.Temperature,
 		"messages": []map[string]string{
 			{"role": "system", "content": system},
 			{"role": "user", "content": user},
@@ -55,11 +151,11 @@ func (g *OpenAICompat) Complete(ctx context.Context, system, user string) (strin
 	}
 	b, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return "", Usage{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.BaseURL+"/chat/completions", bytes.NewReader(b))
 	if err != nil {
-		return "", err
+		return "", Usage{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if g.APIKey != "" {
@@ -67,15 +163,15 @@ func (g *OpenAICompat) Complete(ctx context.Context, system, user string) (strin
 	}
 	res, err := g.HTTP.Do(req)
 	if err != nil {
-		return "", err
+		return "", Usage{}, err
 	}
 	defer res.Body.Close()
 	raw, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", err
+		return "", Usage{}, err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return "", fmt.Errorf("model gateway %d: %s", res.StatusCode, strings.TrimSpace(string(raw)))
+		return "", Usage{}, fmt.Errorf("model gateway %d: %s", res.StatusCode, strings.TrimSpace(string(raw)))
 	}
 	var parsed struct {
 		Choices []struct {
@@ -83,12 +179,22 @@ func (g *OpenAICompat) Complete(ctx context.Context, system, user string) (strin
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
 	}
 	if err := json.Unmarshal(raw, &parsed); err != nil {
-		return "", err
+		return "", Usage{}, err
 	}
 	if len(parsed.Choices) == 0 {
-		return "", fmt.Errorf("empty model response")
+		return "", Usage{}, fmt.Errorf("empty model response")
 	}
-	return parsed.Choices[0].Message.Content, nil
+	usage := Usage{
+		PromptTokens:     parsed.Usage.PromptTokens,
+		CompletionTokens: parsed.Usage.CompletionTokens,
+		TotalTokens:      parsed.Usage.TotalTokens,
+	}
+	return parsed.Choices[0].Message.Content, usage, nil
 }

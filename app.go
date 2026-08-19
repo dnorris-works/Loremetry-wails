@@ -389,6 +389,67 @@ func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
 	return s.GetAnalysisReport(id)
 }
 
+func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, error) {
+	detail, ok := store.GetAnalysisDetail(id)
+	if !ok {
+		return cloud.JobStatus{}, fmt.Errorf("unknown analysis")
+	}
+	if !detail.UsesAI {
+		return cloud.JobStatus{}, fmt.Errorf("not an AI analysis")
+	}
+	if _, err := a.ready(); err != nil {
+		return cloud.JobStatus{}, err
+	}
+	root := store.ResolveProjectRoot(projectPath)
+	if root == "" {
+		return cloud.JobStatus{}, fmt.Errorf("select a book or series first")
+	}
+	src := store.MatchAnalysisSources(root)
+	for _, need := range detail.Needs {
+		role := src.Role(need)
+		if !role.Present || len(role.Files) == 0 {
+			return cloud.JobStatus{}, fmt.Errorf("missing source: %s", need)
+		}
+	}
+	cli, err := a.cloudClient()
+	if err != nil {
+		return cloud.JobStatus{}, err
+	}
+	blobs := store.CollectNeededText(root, detail.Needs)
+	roles := make([]cloud.RoleText, 0, len(blobs))
+	for _, b := range blobs {
+		roles = append(roles, cloud.RoleText{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
+	}
+	return cli.SubmitAnalysisJob(id, roles)
+}
+
+func (a *App) GetAnalysisJobStatus(jobID string) (cloud.JobStatus, error) {
+	cli, err := a.cloudClient()
+	if err != nil {
+		return cloud.JobStatus{}, err
+	}
+	return cli.GetAnalysisJob(jobID)
+}
+
+func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string) (store.AnalysisReport, error) {
+	detail, ok := store.GetAnalysisDetail(id)
+	if !ok {
+		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
+	}
+	s, err := a.ready()
+	if err != nil {
+		return store.AnalysisReport{}, err
+	}
+	root := store.ResolveProjectRoot(projectPath)
+	return s.SaveAnalysisReport(store.AnalysisReport{
+		AnalysisID:    detail.ID,
+		AnalysisLabel: detail.Label,
+		ProjectPath:   root,
+		UsesAI:        true,
+		Body:          body,
+	})
+}
+
 func (a *App) cloudClient() (*cloud.Client, error) {
 	s, err := a.ready()
 	if err != nil {

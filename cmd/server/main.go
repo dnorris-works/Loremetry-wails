@@ -1,19 +1,25 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"loremetry/internal/apiserver/analysis"
 	"loremetry/internal/apiserver/auth"
 	"loremetry/internal/apiserver/billing"
+	"loremetry/internal/apiserver/cache"
+	"loremetry/internal/apiserver/db"
 	"loremetry/internal/apiserver/ledger"
 	"loremetry/internal/apiserver/models"
+	"loremetry/internal/apiserver/queue"
 )
 
 type server struct {
@@ -21,20 +27,49 @@ type server struct {
 	bill    billing.Provider
 	ledger  *ledger.Ledger
 	gateway models.Gateway
+	jobs    *queue.Service
 }
 
 func main() {
-	gw := models.Gateway(models.Stub{})
-	base := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_BASE_URL"))
-	key := strings.TrimSpace(os.Getenv("LOREMETRY_MODEL_API_KEY"))
-	if base != "" {
-		gw = models.NewOpenAICompat(base, key, os.Getenv("LOREMETRY_MODEL"))
+	gw := models.NewFromEnv()
+	sqlDB, err := db.Open()
+	if err != nil {
+		log.Fatal(err)
 	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+		log.Print("postgres connected")
+	}
+
+	var authStore *auth.Store
+	var ledgerStore *ledger.Ledger
+	var cacheStore *cache.Store
+	if sqlDB != nil {
+		authStore = auth.NewPostgres(sqlDB)
+		ledgerStore = ledger.NewPostgres(sqlDB)
+		cacheStore = cache.NewPostgres(sqlDB)
+	} else {
+		authStore = auth.New()
+		ledgerStore = ledger.New()
+		cacheStore = cache.NewMemory()
+		if os.Getenv("LOREMETRY_DEV_SEED") != "0" {
+			log.Print("in-memory auth (set DATABASE_URL for postgres)")
+		}
+	}
+
+	var jobSvc *queue.Service
+	if sqlDB != nil {
+		jobSvc = queue.NewPostgres(sqlDB, ledgerStore, cacheStore, gw)
+	} else {
+		jobSvc = queue.NewMemory(ledgerStore, cacheStore, gw)
+	}
+
 	s := &server{
-		auth:    auth.New(),
+		auth:    authStore,
 		bill:    billing.Fake{Site: env("LOREMETRY_SITE", "https://api.loremetry.com")},
-		ledger:  ledger.New(),
+		ledger:  ledgerStore,
 		gateway: gw,
+		jobs:    jobSvc,
 	}
 	api := http.NewServeMux()
 	api.HandleFunc("GET /health", s.health)
@@ -42,6 +77,8 @@ func main() {
 	api.HandleFunc("POST /auth/device", s.device)
 	api.HandleFunc("POST /billing/checkout", s.checkout)
 	api.HandleFunc("POST /webhooks/billing", s.webhook)
+	api.HandleFunc("POST /analysis/jobs", s.createJob)
+	api.HandleFunc("GET /analysis/jobs/{id}", s.getJob)
 	api.HandleFunc("POST /analysis/run", s.run)
 	api.HandleFunc("GET /billing/fake-checkout", s.fakeCheckoutPage)
 
@@ -160,36 +197,124 @@ func (s *server) webhook(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]string{"status": "ok"})
 }
 
-func (s *server) run(w http.ResponseWriter, r *http.Request) {
-	u, ok := s.user(w, r)
-	if !ok {
-		return
-	}
+func (s *server) parseAnalysisRequest(r *http.Request) (string, []analysis.Source, error) {
 	var in struct {
 		AnalysisID string            `json:"analysis_id"`
 		Sources    []analysis.Source `json:"sources"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		writeJSON(w, 400, map[string]string{"error": "invalid json"})
-		return
+		return "", nil, err
 	}
 	in.AnalysisID = strings.TrimSpace(in.AnalysisID)
 	if in.AnalysisID == "" {
-		writeJSON(w, 400, map[string]string{"error": "analysis_id required"})
-		return
+		return "", nil, errors.New("analysis_id required")
 	}
-	left, ok := s.ledger.Debit(u.ID, in.AnalysisID)
+	return in.AnalysisID, in.Sources, nil
+}
+
+func (s *server) createJob(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.user(w, r)
 	if !ok {
-		writeJSON(w, 402, map[string]string{"code": "CREDITS_EMPTY", "message": "This month’s credits are used up."})
 		return
 	}
-	body, err := s.gateway.Complete(r.Context(), analysis.SystemPrompt(in.AnalysisID), analysis.UserPrompt(in.AnalysisID, in.Sources))
+	analysisID, sources, err := s.parseAnalysisRequest(r)
 	if err != nil {
-		s.ledger.Add(u.ID, s.ledger.CreditCost(in.AnalysisID))
+		writeJSON(w, 400, map[string]string{"error": err.Error()})
+		return
+	}
+	j, err := s.jobs.Enqueue(u.ID, analysisID, sources, u.MaxConcurrentAI)
+	if err != nil {
+		s.writeJobError(w, err)
+		return
+	}
+	writeJSON(w, 200, jobResponse(j))
+}
+
+func (s *server) getJob(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.user(w, r)
+	if !ok {
+		return
+	}
+	id := strings.TrimSpace(r.PathValue("id"))
+	j, err := s.jobs.Get(u.ID, id)
+	if err != nil {
+		writeJSON(w, 404, map[string]string{"error": "job not found"})
+		return
+	}
+	writeJSON(w, 200, jobResponse(j))
+}
+
+func (s *server) run(w http.ResponseWriter, r *http.Request) {
+	u, ok := s.user(w, r)
+	if !ok {
+		return
+	}
+	analysisID, sources, err := s.parseAnalysisRequest(r)
+	if err != nil {
+		writeJSON(w, 400, map[string]string{"error": err.Error()})
+		return
+	}
+	j, err := s.jobs.Enqueue(u.ID, analysisID, sources, u.MaxConcurrentAI)
+	if err != nil {
+		s.writeJobError(w, err)
+		return
+	}
+	if j.Cached || j.Status == queue.StatusDone {
+		writeJSON(w, 200, map[string]any{"body": j.Body, "credits": j.Credits, "cached": j.Cached})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
+	defer cancel()
+	j, err = s.jobs.Wait(ctx, u.ID, j.ID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSON(w, 202, jobResponse(j))
+			return
+		}
 		writeJSON(w, 502, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, 200, map[string]any{"body": body, "credits": left})
+	if j.Status == queue.StatusFailed {
+		writeJSON(w, 502, map[string]string{"error": j.Error})
+		return
+	}
+	writeJSON(w, 200, map[string]any{"body": j.Body, "credits": s.ledger.Balance(u.ID)})
+}
+
+func (s *server) writeJobError(w http.ResponseWriter, err error) {
+	switch {
+	case queue.IsCreditsEmpty(err):
+		writeJSON(w, 402, map[string]string{"code": "CREDITS_EMPTY", "message": "This month’s credits are used up."})
+	case queue.IsConcurrentLimit(err):
+		writeJSON(w, 429, map[string]string{"code": "CONCURRENT_LIMIT", "message": "Another analysis is already running. Wait or upgrade your plan."})
+	case errors.Is(err, queue.ErrPlanRequired):
+		writeJSON(w, 401, map[string]string{"code": "PLAN_REQUIRED", "message": "This analysis uses AI. Choose a plan / add credits."})
+	default:
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+	}
+}
+
+func jobResponse(j *queue.Job) map[string]any {
+	if j == nil {
+		return map[string]any{}
+	}
+	out := map[string]any{
+		"job_id":     j.ID,
+		"status":     j.Status,
+		"step":       j.Step,
+		"step_total": j.StepTotal,
+		"credits":    j.Credits,
+	}
+	if j.Body != "" {
+		out["body"] = j.Body
+	}
+	if j.Error != "" {
+		out["error"] = j.Error
+	}
+	if j.Cached {
+		out["cached"] = true
+	}
+	return out
 }
 
 func (s *server) fakeCheckoutPage(w http.ResponseWriter, r *http.Request) {
