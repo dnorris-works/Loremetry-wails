@@ -142,6 +142,10 @@ export function EnsureOpenStory(arg1) {
   return window['go']['main']['App']['EnsureOpenStory'](arg1);
 }
 
+export function ExportMarkdownDocx(arg1, arg2) {
+  return window['go']['main']['App']['ExportMarkdownDocx'](arg1, arg2);
+}
+
 export function GetAct(arg1) {
   return window['go']['main']['App']['GetAct'](arg1);
 }

@@ -3,7 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { Save, Trash2, X } from 'lucide-react';
+import { Save, Trash2, X, FileDown } from 'lucide-react';
 import { MarkdownReport } from '@/editor/MarkdownReport';
 import { VisualCompareView } from '@/editor/VisualCompareView';
 import { ReportSearchBar, useReportSearch } from '@/editor/ReportSearch';
@@ -175,8 +175,20 @@ export function AnalysisPane() {
         setSaved(true);
         bumpRefresh();
     }
+    async function exportDocx() {
+        setNotice('');
+        try {
+            const path = await api.exportMarkdownDocx(body, 'vellum-prep.docx');
+            if (path)
+                setNotice(`Exported to ${path}`);
+        }
+        catch (err) {
+            setNotice(err instanceof Error ? err.message : 'Export failed');
+        }
+    }
     const hasMerge = !!(mergeOriginal && mergeProposed);
     const hasOutput = mergeFlag ? hasMerge : !!body;
+    const isVellum = detail.id === 'vellum_prep';
     const busyLabel = progress || (busy ? 'Running…' : (queue.length > 1 ? `Run ${queue.length}` : 'Run'));
     return (<div className="flex h-full flex-col">
       <div className="border-b border-border">
@@ -205,6 +217,11 @@ export function AnalysisPane() {
               onNext={() => search.step(1)}
             />
           )}
+          {hasOutput && isVellum && (
+            <Button size="sm" variant="outline" onClick={() => void exportDocx()} className="shrink-0 gap-1.5">
+              <FileDown className="h-3.5 w-3.5"/>Export DOCX
+            </Button>
+          )}
           {hasOutput && !saved && (
             <Button size="sm" variant="outline" onClick={() => void saveReport()} className="shrink-0 gap-1.5">
               <Save className="h-3.5 w-3.5"/>Save
@@ -223,18 +240,23 @@ export function AnalysisPane() {
       </div>
       <div className="flex-1 overflow-hidden">
         {hasOutput ? (
-          mergeFlag || (view === 'merge' && hasMerge) ? (
-            <VisualCompareView original={mergeOriginal} proposed={mergeProposed}/>
-          ) : (
-            <MarkdownReport
-              markdown={body}
-              searchQuery={search.query}
-              searchActiveIndex={search.activeIndex}
-              setSearchActiveIndex={search.setActiveIndex}
-              onSearchMatchCount={search.onMatchCount}
-              searchApiRef={searchApiRef}
-            />
-          )
+          <>
+            {notice && !busy && (
+              <div className="border-b border-border px-4 py-1.5 text-xs text-muted-foreground">{notice}</div>
+            )}
+            {mergeFlag || (view === 'merge' && hasMerge) ? (
+              <VisualCompareView original={mergeOriginal} proposed={mergeProposed}/>
+            ) : (
+              <MarkdownReport
+                markdown={body}
+                searchQuery={search.query}
+                searchActiveIndex={search.activeIndex}
+                setSearchActiveIndex={search.setActiveIndex}
+                onSearchMatchCount={search.onMatchCount}
+                searchApiRef={searchApiRef}
+              />
+            )}
+          </>
         ) : (<div className="overflow-auto p-6">
           <p className="max-w-2xl text-sm leading-relaxed">{detail.description || 'No description.'}</p>
           {mergeFlag && <p className="mt-2 max-w-2xl text-xs text-muted-foreground">Run to open a Compare view of the manuscript with findings marked in place. No separate report is created.</p>}
@@ -317,6 +339,15 @@ export function ReportPane() {
     const mergeProposed = report.proposed || report.Proposed || '';
     const hasMerge = !!(mergeOriginal && mergeProposed);
     const compareOnly = hasMerge && !String(report.body || '').trim();
+    const isVellum = (report.analysis_id || report.analysisId) === 'vellum_prep';
+    async function exportDocx() {
+        try {
+            await api.exportMarkdownDocx(report.body || '', 'vellum-prep.docx');
+        }
+        catch {
+            /* ignore cancel */
+        }
+    }
     return (<div className="flex h-full flex-col">
       <div className="border-b border-border">
         <div className="flex items-center gap-2 px-4 py-2">
@@ -343,6 +374,11 @@ export function ReportPane() {
               onPrev={() => search.step(-1)}
               onNext={() => search.step(1)}
             />
+          )}
+          {isVellum && !compareOnly && (
+            <Button size="sm" variant="outline" onClick={() => void exportDocx()} className="shrink-0 gap-1.5">
+              <FileDown className="h-3.5 w-3.5"/>Export DOCX
+            </Button>
           )}
           {hasMerge && !compareOnly && (
             <div className="flex shrink-0 rounded border border-border text-[10px]">

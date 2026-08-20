@@ -565,6 +565,42 @@ func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string, 
 	})
 }
 
+// ExportMarkdownDocx opens a save dialog and writes a .docx from markdown (report header stripped).
+func (a *App) ExportMarkdownDocx(markdown string, defaultName string) (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("app not ready")
+	}
+	name := strings.TrimSpace(defaultName)
+	if name == "" {
+		name = "manuscript.docx"
+	}
+	if !strings.HasSuffix(strings.ToLower(name), ".docx") {
+		name += ".docx"
+	}
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export DOCX",
+		DefaultFilename: name,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Word Document", Pattern: "*.docx"},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(path) == "" {
+		return "", nil
+	}
+	content := store.ReportContentOnly(markdown)
+	raw, err := store.MarkdownToDocx(content)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 func (a *App) cloudClient() (*cloud.Client, error) {
 	s, err := a.ready()
 	if err != nil {

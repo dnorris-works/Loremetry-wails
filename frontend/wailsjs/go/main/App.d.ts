@@ -74,6 +74,8 @@ export function EnsureOpenSeries(arg1:string):Promise<store.UISession>;
 
 export function EnsureOpenStory(arg1:string):Promise<store.UISession>;
 
+export function ExportMarkdownDocx(arg1:string,arg2:string):Promise<string>;
+
 export function GetAct(arg1:number):Promise<store.StoryAct>;
 
 export function GetAnalysis(arg1:string):Promise<store.AnalysisDetail>;
