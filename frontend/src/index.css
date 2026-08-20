@@ -93,3 +93,42 @@ body {
   white-space: pre-wrap;
 }
 .lexical-editor .editor-link { color: var(--color-primary); text-decoration: underline; }
+
+mark.search-hit {
+  background: #fef08a;
+  color: inherit;
+  border-radius: 0.125rem;
+}
+mark.search-active {
+  background: #fb923c;
+  color: inherit;
+  border-radius: 0.125rem;
+}
+.dark mark.search-hit {
+  background: #854d0e;
+}
+.dark mark.search-active {
+  background: #c2410c;
+}
+
+.proposal-merge,
+.proposal-merge .cm-mergeView {
+  height: 100%;
+  overflow: auto;
+}
+.proposal-merge .cm-editor {
+  height: 100%;
+}
+
+.visual-diff-del {
+  background: color-mix(in oklab, var(--destructive) 14%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in oklab, var(--destructive) 55%, transparent);
+}
+.visual-diff-ins {
+  background: color-mix(in oklab, #16a34a 16%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in oklab, #16a34a 60%, transparent);
+}
+.dark .visual-diff-ins {
+  background: color-mix(in oklab, #4ade80 18%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in oklab, #4ade80 55%, transparent);
+}

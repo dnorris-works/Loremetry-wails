@@ -11,7 +11,7 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
-    const { selection, setSelection, analysisId, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
+    const { selection, setSelection, analysisId, analysisQueue, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
     const hasProject = !!(selection?.dir);
     const confirm = useConfirm();
     const [tree, setTree] = useState({ pens: [], problems: [] });
@@ -86,7 +86,10 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
               <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
               {items.map((item) => {
                 const ai = !!(item.uses_ai ?? item.usesAI);
-                return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${analysisId === item.id ? 'bg-accent text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+                const selected = (analysisQueue || []).includes(item.id);
+                const primary = analysisId === item.id;
+                return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${primary ? 'bg-accent text-foreground' : selected ? 'bg-muted/60 text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+                  {selected ? <Check className="h-3 w-3 shrink-0 text-primary"/> : <span className="inline-block h-3 w-3 shrink-0"/>}
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
                 </button>);

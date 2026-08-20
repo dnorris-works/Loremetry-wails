@@ -34,6 +34,7 @@ export function AppStateProvider({ children }) {
     const [session, setSession] = useState(emptySession);
     const [refreshKey, setRefreshKey] = useState(0);
     const [analysisId, setAnalysisId] = useState('');
+    const [analysisQueue, setAnalysisQueue] = useState([]);
     const [reportId, setReportId] = useState(0);
     useEffect(() => {
         let cancelled = false;
@@ -69,17 +70,28 @@ export function AppStateProvider({ children }) {
         restoreOpen: session.restore_open !== false,
         lastPen: session.last_pen || '',
         analysisId,
+        analysisQueue,
         reportId,
         setAnalysis: (id) => {
             setReportId(0);
-            setAnalysisId(id || '');
+            const next = id || '';
+            setAnalysisId(next);
+            if (!next) {
+                setAnalysisQueue([]);
+                return;
+            }
+            void api.analysisRunQueue(next).then((q) => {
+                setAnalysisQueue(Array.isArray(q) && q.length ? q : [next]);
+            }).catch(() => setAnalysisQueue([next]));
         },
         setReport: (id) => {
             setAnalysisId('');
+            setAnalysisQueue([]);
             setReportId(id || 0);
         },
         setSelection: (sel) => {
             setAnalysisId('');
+            setAnalysisQueue([]);
             setReportId(0);
             const file = sel?.type === 'file';
             return api.setUISelection(file ? sel.dir : '', file ? sel.name : '').then(apply);
@@ -94,7 +106,7 @@ export function AppStateProvider({ children }) {
         setLastPen: (name) => api.setLastPen(name).then(apply),
         refreshKey,
         bumpRefresh: () => setRefreshKey((n) => n + 1),
-    }), [session, refreshKey, analysisId, reportId]);
+    }), [session, refreshKey, analysisId, analysisQueue, reportId]);
     return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function useAppState() {

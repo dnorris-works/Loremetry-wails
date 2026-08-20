@@ -7,7 +7,9 @@ type AnalysisItem struct {
 	Label       string   `json:"label"`
 	Description string   `json:"description"`
 	Needs       []string `json:"needs"`
+	DependsOn   []string `json:"depends_on"`
 	UsesAI      bool     `json:"uses_ai"`
+	UsesMerge   bool     `json:"uses_merge"`
 }
 
 type AnalysisDetail struct {
@@ -16,7 +18,9 @@ type AnalysisDetail struct {
 	Group       string   `json:"group"`
 	Description string   `json:"description"`
 	Needs       []string `json:"needs"`
+	DependsOn   []string `json:"depends_on"`
 	UsesAI      bool     `json:"uses_ai"`
+	UsesMerge   bool     `json:"uses_merge"`
 }
 
 type AnalysisGroup struct {
@@ -30,10 +34,15 @@ func AnalysisCatalog() []AnalysisGroup {
 		if needs == nil {
 			needs = []string{}
 		}
-		return AnalysisItem{ID: id, Label: label, Description: analysisDescription(id), Needs: needs, UsesAI: analysisUsesAI(id)}
+		return AnalysisItem{
+			ID: id, Label: label, Description: analysisDescription(id),
+			Needs: needs, DependsOn: analysisDependsOn(id),
+			UsesAI: analysisUsesAI(id), UsesMerge: analysisUsesMerge(id),
+		}
 	}
 	return []AnalysisGroup{
 		{ID: "kdp-wide", Label: "KDP / Wide", Items: []AnalysisItem{
+			item("chapter_summaries", "Chapter Summaries", "manuscript"),
 			item("analysis", "KDP Analysis", "manuscript", "plot"),
 			item("genre_analysis", "Genre Analysis", "manuscript"),
 			item("genre_ranking", "Genre Ranking", "manuscript"),
@@ -107,12 +116,75 @@ func GetAnalysisDetail(id string) (AnalysisDetail, bool) {
 					Group:       g.Label,
 					Description: it.Description,
 					Needs:       it.Needs,
+					DependsOn:   it.DependsOn,
 					UsesAI:      it.UsesAI,
+					UsesMerge:   it.UsesMerge,
 				}, true
 			}
 		}
 	}
 	return AnalysisDetail{}, false
+}
+
+// CollectPrerequisites returns transitive depends_on ids in dependency order (deps before dependents).
+// The primary analysis id itself is not included.
+func CollectPrerequisites(id string) []string {
+	id = strings.TrimSpace(id)
+	visited := map[string]bool{}
+	var out []string
+	var walk func(string)
+	walk = func(cur string) {
+		detail, ok := GetAnalysisDetail(cur)
+		if !ok {
+			return
+		}
+		for _, dep := range detail.DependsOn {
+			dep = strings.TrimSpace(dep)
+			if dep == "" || dep == id || visited[dep] {
+				continue
+			}
+			visited[dep] = true
+			walk(dep)
+			out = append(out, dep)
+		}
+	}
+	walk(id)
+	return out
+}
+
+// AnalysisRunQueue returns prerequisites + primary in run order.
+func AnalysisRunQueue(id string) []string {
+	id = strings.TrimSpace(id)
+	deps := CollectPrerequisites(id)
+	out := make([]string, 0, len(deps)+1)
+	out = append(out, deps...)
+	out = append(out, id)
+	return out
+}
+
+func analysisDependsOn(id string) []string {
+	switch id {
+	case "genre_analysis", "wide_analysis", "discovery_keywords", "content_maturity_advisory":
+		return []string{"chapter_summaries"}
+	case "genre_ranking", "kdp_categories", "kdp_keywords", "bisac_classification":
+		return []string{"chapter_summaries", "genre_analysis"}
+	case "mi_search_terms":
+		return []string{"chapter_summaries", "analysis"}
+	case "analysis":
+		return []string{"chapter_summaries", "mi_search_terms"}
+	case "keyword_search":
+		return []string{"chapter_summaries", "analysis"}
+	case "competition_report", "review_mining", "author_analysis":
+		return []string{"mi_search_terms"}
+	case "google_keyword_search":
+		return []string{"chapter_summaries", "discovery_keywords"}
+	case "wide_metadata_paste":
+		return []string{"bisac_classification", "discovery_keywords"}
+	case "blurb_builder":
+		return []string{"chapter_summaries"}
+	default:
+		return []string{}
+	}
 }
 
 func analysisUsesAI(id string) bool {
@@ -124,8 +196,20 @@ func analysisUsesAI(id string) bool {
 	}
 }
 
+// analysisUsesMerge marks analyses that return original/proposed for the Compare merge view.
+func analysisUsesMerge(id string) bool {
+	switch id {
+	case "zeigarnik_analysis":
+		return true
+	default:
+		return false
+	}
+}
+
 func analysisDescription(id string) string {
 	switch id {
+	case "chapter_summaries":
+		return "AI genre-signal summary per chapter. Required by most KDP and Wide analyses."
 	case "analysis":
 		return "Genre, Kindle and paperback categories, print BISAC, seven keywords, and ready-to-paste KDP metadata."
 	case "genre_analysis":
@@ -216,5 +300,102 @@ func analysisDescription(id string) string {
 		return "Clean markdown manuscript for Vellum or Atticus import. No AI."
 	default:
 		return ""
+	}
+}
+
+func analysisUsage(id string) string {
+	switch id {
+	case "chapter_summaries":
+		return "Run this first for KDP/Wide stacks, or select a dependent analysis and it will be included automatically."
+	case "analysis":
+		return "Copy categories, BISAC, and keywords into KDP. Save this report before you change the manuscript."
+	case "genre_analysis":
+		return "Use the top genre and comps when choosing categories and writing your blurb."
+	case "genre_ranking":
+		return "Compare scores across genres; pick the strongest fit for metadata and positioning."
+	case "kdp_categories":
+		return "Enter the suggested Kindle and paperback browse paths in KDP category fields."
+	case "kdp_keywords":
+		return "Paste each string into KDP’s seven keyword slots (50 characters or fewer)."
+	case "mi_search_terms":
+		return "Use these phrases in Amazon search and competition tools to size the niche."
+	case "keyword_search":
+		return "Favor high-volume, moderate-competition terms when refining KDP keywords."
+	case "competition_report":
+		return "Weigh niche density and comps before locking genre, price, and series strategy."
+	case "review_mining":
+		return "Steal reader language for blurbs and fix pain points they complain about in comps."
+	case "author_analysis":
+		return "Benchmark release cadence, pricing, and series length against nearby competitors."
+	case "wide_analysis":
+		return "Apply BISAC, discovery keywords, and content notes across wide stores and aggregators."
+	case "bisac_classification":
+		return "Enter the recommended BISAC codes in Ingram, Apple, Kobo, or your aggregator."
+	case "discovery_keywords":
+		return "Add these phrases to wide-store keyword and SEO fields."
+	case "google_keyword_search":
+		return "Prioritize phrases with real search volume when filling wide discovery keywords."
+	case "content_maturity_advisory":
+		return "Match store maturity settings and content warnings to the advisory below."
+	case "wide_metadata_paste":
+		return "Copy each block into the matching aggregator or store metadata field."
+	case "zeigarnik_analysis":
+		return "Use Compare to review flagged chapter endings; strengthen weak open loops and leave intentional closures alone."
+	case "continuity_check":
+		return "Fix contradicted facts in the manuscript (or series bible) before the next draft pass."
+	case "show_dont_tell":
+		return "Rewrite flagged telling passages to show emotion through action and sensory detail."
+	case "ai_isms":
+		return "Revise flagged lines so they sound like your voice, not generic machine prose."
+	case "chekhovs_gun":
+		return "Pay off unused setups or cut them so early mentions earn their keep."
+	case "red_herring_vs_abandoned":
+		return "Keep intentional misdirection; restore or remove dropped threads."
+	case "foreshadowing_twist_fairness":
+		return "Add fair clues where twists feel cheap; trim over-telegraphing where they feel obvious."
+	case "macguffin_clarity":
+		return "Clarify the driving object or goal if characters (or readers) lose track of why it matters."
+	case "want_vs_need":
+		return "Align scenes so external want and internal need pull characters through the arc."
+	case "thematic_throughline":
+		return "Reinforce or prune scenes that drift from the central theme."
+	case "mirror_foil_character":
+		return "Use mirror/foil pairings to sharpen theme; cut pairings that do no thematic work."
+	case "pov_discipline":
+		return "Fix head-hops and information leaks so each scene stays in the intended POV."
+	case "story_beat_placement":
+		return "Move, add, or cut beats so structural milestones land where the framework expects."
+	case "scene_sequel_balance":
+		return "Add action or reflection where the report shows momentum stalling."
+	case "timeline_flashback":
+		return "Clarify or cut flashbacks that confuse chronology rather than deepen stakes."
+	case "dramatic_irony":
+		return "Lean into reader-knows-more moments where tension or humor pays off."
+	case "stakes_escalation":
+		return "Raise or reset stakes where the arc plateaus; cut reversals that undercut tension."
+	case "cross_book_setup_payoff":
+		return "Track series setups that still need payoff in a later book or epilogue."
+	case "series_pacing_comparator":
+		return "Adjust book length and beat density so series pacing feels consistent."
+	case "recurring_motif_theme_series":
+		return "Keep motifs coherent across books; resolve contradictions in theme or symbol."
+	case "blurb_builder":
+		return "Pick a variant for Amazon, back cover, or BookBub and paste it into that channel."
+	case "print_production":
+		return "Use word count and spine estimates when choosing trim and ordering a KDP/Ingram cover template."
+	case "ai_beta_reader":
+		return "Prioritize chapters with high put-down risk; revise hooks and endings there first."
+	case "cliffhanger_score":
+		return "Strengthen weak chapter endings so readers turn the page."
+	case "hook_strength":
+		return "Rewrite the opening if a browsing reader would stop before page two."
+	case "pacing_curve":
+		return "Trim or split chapters marked as drag risk; keep high-pace chapters intact."
+	case "line_polish":
+		return "Search the manuscript for listed filter words and echoes; cut or replace the worst repeats."
+	case "vellum_prep":
+		return "Copy or export this markdown into Vellum or Atticus as a new book import."
+	default:
+		return "Review the findings below and apply changes in your manuscript or metadata as needed."
 	}
 }

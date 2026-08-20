@@ -22,7 +22,15 @@ func TestAnalysisCatalog(t *testing.T) {
 		t.Fatalf("detail %+v %v", got, ok)
 	}
 	local, ok := GetAnalysisDetail("line_polish")
-	if !ok || local.UsesAI {
+	if !ok || local.UsesAI || local.UsesMerge {
 		t.Fatalf("local %+v %v", local, ok)
+	}
+	zeig, ok := GetAnalysisDetail("zeigarnik_analysis")
+	if !ok || zeig.UsesAI || !zeig.UsesMerge {
+		t.Fatalf("zeigarnik %+v %v", zeig, ok)
+	}
+	genre, ok := GetAnalysisDetail("genre_analysis")
+	if !ok || len(genre.DependsOn) == 0 || genre.DependsOn[0] != "chapter_summaries" {
+		t.Fatalf("genre deps %+v %v", genre, ok)
 	}
 }

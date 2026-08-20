@@ -10,6 +10,7 @@ CREATE INDEX IF NOT EXISTS idx_char_profiles_story ON character_profiles(story_i
 CREATE INDEX IF NOT EXISTS idx_char_profiles_series ON character_profiles(series_id);
 CREATE INDEX IF NOT EXISTS idx_series_bible_sort ON series_bible_documents(series_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_analysis_reports_user ON analysis_reports(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analysis_results_user ON analysis_results(user_id, project_path, updated_at DESC);
 `
 
 const schemaSQL = `
@@ -177,6 +178,21 @@ CREATE TABLE IF NOT EXISTS analysis_reports (
     project_path  TEXT NOT NULL,
     uses_ai       INTEGER NOT NULL DEFAULT 0,
     body          TEXT NOT NULL,
+    original      TEXT NOT NULL DEFAULT '',
+    proposed      TEXT NOT NULL DEFAULT '',
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS analysis_results (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_path TEXT NOT NULL,
+    analysis_id  TEXT NOT NULL,
+    label        TEXT NOT NULL,
+    data_json    TEXT NOT NULL DEFAULT '{}',
+    markdown     TEXT NOT NULL DEFAULT '',
+    original     TEXT NOT NULL DEFAULT '',
+    proposed     TEXT NOT NULL DEFAULT '',
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, project_path, analysis_id)
 );
 `

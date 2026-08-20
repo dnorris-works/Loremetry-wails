@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 9
+const schemaVersion = 11
 
 func DefaultPath() (string, error) {
 	configDir, err := os.UserConfigDir()
@@ -65,6 +65,8 @@ func migrate(conn *sql.DB) error {
 	_, _ = conn.Exec(`ALTER TABLE story_acts ADD COLUMN source_rel TEXT`)
 	_, _ = conn.Exec(`ALTER TABLE series ADD COLUMN pen_name TEXT`)
 	_, _ = conn.Exec(`ALTER TABLE stories ADD COLUMN pen_name TEXT`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_reports ADD COLUMN original TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_reports ADD COLUMN proposed TEXT NOT NULL DEFAULT ''`)
 	if err := ensureCharacterParents(conn); err != nil {
 		return err
 	}

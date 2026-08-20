@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -8,39 +9,60 @@ import (
 	"unicode"
 )
 
-func RunLocalAnalysis(id, projectPath string) (string, error) {
+type AnalysisRunResult struct {
+	Markdown string
+	Original string
+	Proposed string
+	DataJSON string
+}
+
+func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 	detail, ok := GetAnalysisDetail(id)
 	if !ok {
-		return "", fmt.Errorf("unknown analysis")
+		return AnalysisRunResult{}, fmt.Errorf("unknown analysis")
 	}
 	if detail.UsesAI {
-		return "", fmt.Errorf("this analysis uses AI")
+		return AnalysisRunResult{}, fmt.Errorf("this analysis uses AI")
 	}
 	root := ResolveProjectRoot(projectPath)
 	if root == "" {
-		return "", fmt.Errorf("select a book or series first")
+		return AnalysisRunResult{}, fmt.Errorf("select a book or series first")
 	}
 	src := MatchAnalysisSources(root)
 	for _, need := range detail.Needs {
 		role := src.Role(need)
 		if !role.Present || len(role.Files) == 0 {
-			return "", fmt.Errorf("missing source: %s", need)
+			return AnalysisRunResult{}, fmt.Errorf("missing source: %s", need)
 		}
 	}
 	blobs := CollectNeededText(root, detail.Needs)
 	text := joinRoleText(blobs, "manuscript")
+	var content, original, proposed, dataJSON string
 	switch id {
 	case "print_production":
-		return runPrintProduction(text), nil
+		content = runPrintProduction(text)
+		dataJSON = fmt.Sprintf(`{"words":%d}`, len(strings.Fields(text)))
 	case "line_polish":
-		return runLinePolish(text), nil
+		content = runLinePolish(text)
+		dataJSON = `{"kind":"line_polish"}`
 	case "vellum_prep":
-		return runVellumPrep(blobs), nil
+		content = runVellumPrep(blobs)
+		dataJSON = `{"kind":"vellum_prep"}`
 	case "zeigarnik_analysis":
-		return runZeigarnik(blobs), nil
+		original, proposed, dataJSON = runZeigarnik(blobs)
 	default:
-		return "", fmt.Errorf("this analysis cannot run yet")
+		return AnalysisRunResult{}, fmt.Errorf("this analysis cannot run yet")
 	}
+	md := ""
+	if !detail.UsesMerge {
+		md = FormatReportBody(detail.Label, detail.ID, content)
+	}
+	return AnalysisRunResult{
+		Markdown: md,
+		Original: original,
+		Proposed: proposed,
+		DataJSON: dataJSON,
+	}, nil
 }
 
 func joinRoleText(blobs []RoleText, role string) string {
@@ -69,11 +91,7 @@ func runPrintProduction(text string) string {
 		pages6x9 = 1
 	}
 	spine := float64(pages6x9) * 0.002252
-	return fmt.Sprintf(`# Print production
-
-Local estimate from the manuscript. No AI.
-
-- Word count: %d
+	return fmt.Sprintf(`- Word count: %d
 - Characters: %d
 - Approx. 6×9 pages (250 wpp): %d
 - Approx. cream spine (in): %.3f
@@ -100,7 +118,7 @@ func runLinePolish(text string) string {
 	}
 	echoes := findEchoes(words)
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Line-level polish\n\nHeuristic scan. No AI.\n\n- Words: %d\n- Filter-word hits (sample): %d\n- -ly adverbs: %d\n- Nearby echoes: %d\n\n",
+	fmt.Fprintf(&b, "- Words: %d\n- Filter-word hits (sample): %d\n- -ly adverbs: %d\n- Nearby echoes: %d\n\n",
 		len(words), len(filterHits), lyHits, len(echoes))
 	if len(filterHits) > 0 {
 		b.WriteString("## Filter words\n\n")
@@ -157,7 +175,6 @@ func findEchoes(words []string) []string {
 
 func runVellumPrep(blobs []RoleText) string {
 	var b strings.Builder
-	b.WriteString("# Vellum & Atticus prep\n\nCleaned manuscript markdown. No AI.\n\n")
 	for _, blob := range blobs {
 		if blob.Role != "manuscript" {
 			continue
@@ -168,32 +185,55 @@ func runVellumPrep(blobs []RoleText) string {
 	return b.String()
 }
 
-func runZeigarnik(blobs []RoleText) string {
-	var b strings.Builder
-	b.WriteString("# Zeigarnik effect\n\nHeuristic scan for open loops at chapter ends. No AI.\n\n")
-	n := 0
+var openLoopCue = regexp.MustCompile(`(?i)\b(would|until|tomorrow|later|unless)\b`)
+
+func chapterEndingOpenLoop(text string) (last string, open bool) {
+	end := strings.TrimSpace(text)
+	if end == "" {
+		return "", false
+	}
+	sample := end
+	if len(sample) > 400 {
+		sample = sample[len(sample)-400:]
+	}
+	lines := strings.Split(strings.TrimSpace(sample), "\n")
+	last = strings.TrimSpace(lines[len(lines)-1])
+	open = strings.Contains(last, "?") || strings.HasSuffix(last, "...") || strings.HasSuffix(last, "…") ||
+		openLoopCue.MatchString(last)
+	return last, open
+}
+
+// runZeigarnik builds manuscript original/proposed for Compare only (no separate report body).
+func runZeigarnik(blobs []RoleText) (original, proposed, dataJSON string) {
+	var orig, prop strings.Builder
+	type loopHit struct {
+		File   string `json:"file"`
+		Title  string `json:"title"`
+		Ending string `json:"ending"`
+	}
+	var loops []loopHit
 	for _, blob := range blobs {
 		if blob.Role != "manuscript" {
 			continue
 		}
-		end := strings.TrimSpace(blob.Text)
-		if end == "" {
-			continue
-		}
-		if len(end) > 400 {
-			end = end[len(end)-400:]
-		}
-		lines := strings.Split(strings.TrimSpace(end), "\n")
-		last := strings.TrimSpace(lines[len(lines)-1])
-		open := strings.Contains(last, "?") || strings.HasSuffix(last, "...") || strings.HasSuffix(last, "…") ||
-			regexp.MustCompile(`(?i)\b(would|until|tomorrow|later|unless)\b`).MatchString(last)
+		title := strings.TrimSuffix(blob.Name, filepath.Ext(blob.Name))
+		text := strings.TrimSpace(blob.Text)
+		chapter := fmt.Sprintf("# %s\n\n%s\n\n", title, text)
+		orig.WriteString(chapter)
+
+		last, open := chapterEndingOpenLoop(text)
 		if open {
-			n++
-			fmt.Fprintf(&b, "- **%s** — possible open loop: %q\n", blob.Name, last)
+			loops = append(loops, loopHit{File: blob.Name, Title: title, Ending: last})
+			fmt.Fprintf(&prop, "# %s\n\n%s\n\n> **Open loop** — possible unresolved thread at chapter end.\n\n", title, text)
+		} else {
+			prop.WriteString(chapter)
 		}
 	}
-	if n == 0 {
-		b.WriteString("No strong open-loop chapter endings found.\n")
+	payload, err := json.Marshal(map[string]any{"open_loops": loops})
+	if err != nil {
+		dataJSON = `{"open_loops":[]}`
+	} else {
+		dataJSON = string(payload)
 	}
-	return b.String()
+	return orig.String(), prop.String(), dataJSON
 }

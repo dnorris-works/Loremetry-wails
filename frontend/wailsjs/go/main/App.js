@@ -22,6 +22,10 @@ export function AdminTableSchema(arg1) {
   return window['go']['main']['App']['AdminTableSchema'](arg1);
 }
 
+export function AnalysisRunQueue(arg1) {
+  return window['go']['main']['App']['AnalysisRunQueue'](arg1);
+}
+
 export function ClearFolderLink(arg1, arg2, arg3) {
   return window['go']['main']['App']['ClearFolderLink'](arg1, arg2, arg3);
 }
@@ -152,10 +156,6 @@ export function GetAnalysisJobStatus(arg1) {
 
 export function GetAnalysisReport(arg1) {
   return window['go']['main']['App']['GetAnalysisReport'](arg1);
-}
-
-export function GetAnalysisReportBodyRange(arg1, arg2, arg3) {
-  return window['go']['main']['App']['GetAnalysisReportBodyRange'](arg1, arg2, arg3);
 }
 
 export function GetChapter(arg1) {
@@ -290,6 +290,10 @@ export function OpenDiskFile(arg1, arg2) {
   return window['go']['main']['App']['OpenDiskFile'](arg1, arg2);
 }
 
+export function PersistAnalysisResult(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['PersistAnalysisResult'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
 export function PickImportFolder() {
   return window['go']['main']['App']['PickImportFolder']();
 }
@@ -354,8 +358,8 @@ export function RunAnalysis(arg1, arg2) {
   return window['go']['main']['App']['RunAnalysis'](arg1, arg2);
 }
 
-export function SaveAnalysisJobReport(arg1, arg2, arg3) {
-  return window['go']['main']['App']['SaveAnalysisJobReport'](arg1, arg2, arg3);
+export function SaveAnalysisJobReport(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SaveAnalysisJobReport'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function SetDraftSection(arg1, arg2) {

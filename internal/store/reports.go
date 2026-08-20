@@ -1,8 +1,35 @@
 package store
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-const ReportInlineMax = 50_000
+// FormatReportBody prepends the standard About / How to use header to report content.
+// The full markdown (header + body) is what gets saved in analysis_reports.body.
+func FormatReportBody(label, analysisID, content string) string {
+	about := strings.TrimSpace(analysisDescription(analysisID))
+	usage := strings.TrimSpace(analysisUsage(analysisID))
+	content = strings.TrimSpace(content)
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s\n\n", strings.TrimSpace(label))
+	b.WriteString("## About this report\n\n")
+	if about != "" {
+		b.WriteString(about)
+		b.WriteString("\n\n")
+	}
+	b.WriteString("## How to use\n\n")
+	if usage != "" {
+		b.WriteString(usage)
+		b.WriteString("\n\n")
+	}
+	b.WriteString("---\n\n")
+	if content != "" {
+		b.WriteString(content)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
 
 type AnalysisReport struct {
 	ID            int64  `json:"id"`
@@ -11,7 +38,8 @@ type AnalysisReport struct {
 	ProjectPath   string `json:"project_path"`
 	UsesAI        bool   `json:"uses_ai"`
 	Body          string `json:"body,omitempty"`
-	Large         bool   `json:"large,omitempty"`
+	Original      string `json:"original,omitempty"`
+	Proposed      string `json:"proposed,omitempty"`
 	BodySize      int    `json:"body_size,omitempty"`
 	CreatedAt     string `json:"created_at"`
 }
@@ -26,23 +54,15 @@ type AnalysisReportSummary struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-type ReportBodyRange struct {
-	ID     int64  `json:"id"`
-	Text   string `json:"text"`
-	Start  int    `json:"start"`
-	End    int    `json:"end"`
-	Total  int    `json:"total"`
-}
-
 func (s *Store) SaveAnalysisReport(rep AnalysisReport) (AnalysisReport, error) {
 	uses := 0
 	if rep.UsesAI {
 		uses = 1
 	}
 	res, err := s.DB.Exec(`
-		INSERT INTO analysis_reports (user_id, analysis_id, analysis_label, project_path, uses_ai, body, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-		s.UserID, rep.AnalysisID, rep.AnalysisLabel, rep.ProjectPath, uses, rep.Body)
+		INSERT INTO analysis_reports (user_id, analysis_id, analysis_label, project_path, uses_ai, body, original, proposed, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+		s.UserID, rep.AnalysisID, rep.AnalysisLabel, rep.ProjectPath, uses, rep.Body, rep.Original, rep.Proposed)
 	if err != nil {
 		return AnalysisReport{}, err
 	}
@@ -56,25 +76,15 @@ func (s *Store) SaveAnalysisReport(rep AnalysisReport) (AnalysisReport, error) {
 func (s *Store) GetAnalysisReport(id int64) (AnalysisReport, error) {
 	var r AnalysisReport
 	var uses int
-	var bodySize int
 	err := s.DB.QueryRow(`
-		SELECT id, analysis_id, analysis_label, project_path, uses_ai, created_at, LENGTH(body)
+		SELECT id, analysis_id, analysis_label, project_path, uses_ai, body, COALESCE(original, ''), COALESCE(proposed, ''), created_at
 		FROM analysis_reports WHERE id = ? AND user_id = ?`, id, s.UserID).
-		Scan(&r.ID, &r.AnalysisID, &r.AnalysisLabel, &r.ProjectPath, &uses, &r.CreatedAt, &bodySize)
+		Scan(&r.ID, &r.AnalysisID, &r.AnalysisLabel, &r.ProjectPath, &uses, &r.Body, &r.Original, &r.Proposed, &r.CreatedAt)
 	if err != nil {
 		return AnalysisReport{}, fmt.Errorf("report not found")
 	}
 	r.UsesAI = uses != 0
-	r.BodySize = bodySize
-	if bodySize > ReportInlineMax {
-		r.Large = true
-		return r, nil
-	}
-	err = s.DB.QueryRow(`SELECT body FROM analysis_reports WHERE id = ? AND user_id = ?`, id, s.UserID).
-		Scan(&r.Body)
-	if err != nil {
-		return AnalysisReport{}, fmt.Errorf("report not found")
-	}
+	r.BodySize = len(r.Body)
 	return r, nil
 }
 
@@ -97,43 +107,6 @@ func (s *Store) ListAnalysisReports() ([]AnalysisReportSummary, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
-}
-
-func (s *Store) GetAnalysisReportBodyRange(id int64, offset, limit int) (ReportBodyRange, error) {
-	if limit <= 0 {
-		limit = defaultPageSize
-	}
-	var total int
-	err := s.DB.QueryRow(`
-		SELECT LENGTH(body) FROM analysis_reports WHERE id = ? AND user_id = ?`, id, s.UserID).Scan(&total)
-	if err != nil {
-		return ReportBodyRange{}, fmt.Errorf("report not found")
-	}
-	if offset < 0 {
-		offset = 0
-	}
-	if offset >= total {
-		return ReportBodyRange{ID: id, Start: total, End: total, Total: total}, nil
-	}
-	end := offset + limit
-	if end > total {
-		end = total
-	}
-	length := end - offset
-	var chunk string
-	err = s.DB.QueryRow(`
-		SELECT SUBSTR(body, ?, ?) FROM analysis_reports WHERE id = ? AND user_id = ?`,
-		offset+1, length, id, s.UserID).Scan(&chunk)
-	if err != nil {
-		return ReportBodyRange{}, fmt.Errorf("report not found")
-	}
-	return ReportBodyRange{
-		ID:    id,
-		Text:  chunk,
-		Start: offset,
-		End:   end,
-		Total: total,
-	}, nil
 }
 
 func (s *Store) DeleteAnalysisReport(id int64) error {

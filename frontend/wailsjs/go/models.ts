@@ -182,7 +182,9 @@ export namespace store {
 	    group: string;
 	    description: string;
 	    needs: string[];
+	    depends_on: string[];
 	    uses_ai: boolean;
+	    uses_merge: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisDetail(source);
@@ -195,7 +197,9 @@ export namespace store {
 	        this.group = source["group"];
 	        this.description = source["description"];
 	        this.needs = source["needs"];
+	        this.depends_on = source["depends_on"];
 	        this.uses_ai = source["uses_ai"];
+	        this.uses_merge = source["uses_merge"];
 	    }
 	}
 	export class AnalysisFile {
@@ -219,7 +223,9 @@ export namespace store {
 	    label: string;
 	    description: string;
 	    needs: string[];
+	    depends_on: string[];
 	    uses_ai: boolean;
+	    uses_merge: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisItem(source);
@@ -231,7 +237,9 @@ export namespace store {
 	        this.label = source["label"];
 	        this.description = source["description"];
 	        this.needs = source["needs"];
+	        this.depends_on = source["depends_on"];
 	        this.uses_ai = source["uses_ai"];
+	        this.uses_merge = source["uses_merge"];
 	    }
 	}
 	export class AnalysisGroup {
@@ -276,7 +284,8 @@ export namespace store {
 	    project_path: string;
 	    uses_ai: boolean;
 	    body?: string;
-	    large?: boolean;
+	    original?: string;
+	    proposed?: string;
 	    body_size?: number;
 	    created_at: string;
 	
@@ -292,7 +301,8 @@ export namespace store {
 	        this.project_path = source["project_path"];
 	        this.uses_ai = source["uses_ai"];
 	        this.body = source["body"];
-	        this.large = source["large"];
+	        this.original = source["original"];
+	        this.proposed = source["proposed"];
 	        this.body_size = source["body_size"];
 	        this.created_at = source["created_at"];
 	    }
@@ -1153,26 +1163,6 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.section = source["section"];
 	        this.renamed = source["renamed"];
-	    }
-	}
-	export class ReportBodyRange {
-	    id: number;
-	    text: string;
-	    start: number;
-	    end: number;
-	    total: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ReportBodyRange(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.text = source["text"];
-	        this.start = source["start"];
-	        this.end = source["end"];
-	        this.total = source["total"];
 	    }
 	}
 	export class Series {

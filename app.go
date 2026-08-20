@@ -350,6 +350,10 @@ func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
 	return got, nil
 }
 
+func (a *App) AnalysisRunQueue(id string) []string {
+	return store.AnalysisRunQueue(id)
+}
+
 func (a *App) RunAnalysis(id string, projectPath string) (store.AnalysisReport, error) {
 	return withBusy(a, func() (store.AnalysisReport, error) { return a.runAnalysis(id, projectPath) })
 }
@@ -358,10 +362,6 @@ func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, 
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {
 		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
-	}
-	s, err := a.ready()
-	if err != nil {
-		return store.AnalysisReport{}, err
 	}
 	root := store.ResolveProjectRoot(projectPath)
 	if root == "" {
@@ -375,12 +375,17 @@ func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, 
 		}
 	}
 	var body string
+	var original, proposed, dataJSON string
 	usesAI := detail.UsesAI
 	if !usesAI {
-		body, err = store.RunLocalAnalysis(id, root)
-		if err != nil {
-			return store.AnalysisReport{}, err
+		result, runErr := store.RunLocalAnalysis(id, root)
+		if runErr != nil {
+			return store.AnalysisReport{}, runErr
 		}
+		body = result.Markdown
+		original = result.Original
+		proposed = result.Proposed
+		dataJSON = result.DataJSON
 	} else {
 		cli, err := a.cloudClient()
 		if err != nil {
@@ -395,15 +400,71 @@ func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, 
 		if err != nil {
 			return store.AnalysisReport{}, err
 		}
-		body = out.Body
+		body = store.FormatReportBody(detail.Label, detail.ID, out.Body)
+		dataJSON = `{"kind":"ai","analysis_id":"` + detail.ID + `"}`
 	}
-	return s.SaveAnalysisReport(store.AnalysisReport{
+	if err := a.persistResult(detail, root, body, original, proposed, dataJSON); err != nil {
+		return store.AnalysisReport{}, err
+	}
+	size := len(body)
+	return store.AnalysisReport{
 		AnalysisID:    detail.ID,
 		AnalysisLabel: detail.Label,
 		ProjectPath:   root,
 		UsesAI:        usesAI,
 		Body:          body,
+		Original:      original,
+		Proposed:      proposed,
+		BodySize:      size,
+	}, nil
+}
+
+func (a *App) persistResult(detail store.AnalysisDetail, root, body, original, proposed, dataJSON string) error {
+	s, err := a.ready()
+	if err != nil {
+		return err
+	}
+	_, err = s.UpsertAnalysisResult(store.AnalysisResult{
+		AnalysisID:  detail.ID,
+		Label:       detail.Label,
+		ProjectPath: root,
+		DataJSON:    dataJSON,
+		Markdown:    body,
+		Original:    original,
+		Proposed:    proposed,
 	})
+	return err
+}
+
+func (a *App) PersistAnalysisResult(id string, projectPath string, body string, original string, proposed string, dataJSON string) (store.AnalysisReport, error) {
+	detail, ok := store.GetAnalysisDetail(id)
+	if !ok {
+		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
+	}
+	root := store.ResolveProjectRoot(projectPath)
+	if root == "" {
+		return store.AnalysisReport{}, fmt.Errorf("select a book or series first")
+	}
+	if strings.TrimSpace(dataJSON) == "" {
+		dataJSON = `{"kind":"ai","analysis_id":"` + detail.ID + `"}`
+	}
+	md := body
+	if !strings.Contains(body, "## About this report") {
+		md = store.FormatReportBody(detail.Label, detail.ID, body)
+	}
+	if err := a.persistResult(detail, root, md, original, proposed, dataJSON); err != nil {
+		return store.AnalysisReport{}, err
+	}
+	return store.AnalysisReport{
+		AnalysisID:    detail.ID,
+		AnalysisLabel: detail.Label,
+		ProjectPath:   root,
+		UsesAI:        detail.UsesAI,
+		Body:          md,
+		Original:      original,
+		Proposed:      proposed,
+		BodySize:      len(md),
+	}, nil
 }
 
 func (a *App) ListAnalysisReports() ([]store.AnalysisReportSummary, error) {
@@ -420,14 +481,6 @@ func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
 		return store.AnalysisReport{}, err
 	}
 	return s.GetAnalysisReport(id)
-}
-
-func (a *App) GetAnalysisReportBodyRange(id int64, offset int, limit int) (store.ReportBodyRange, error) {
-	s, err := a.ready()
-	if err != nil {
-		return store.ReportBodyRange{}, err
-	}
-	return s.GetAnalysisReportBodyRange(id, offset, limit)
 }
 
 func (a *App) DeleteAnalysisReport(id int64) error {
@@ -469,7 +522,11 @@ func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, 
 	for _, b := range blobs {
 		roles = append(roles, cloud.RoleText{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
 	}
-	return cli.SubmitAnalysisJob(id, roles)
+	st, err := cli.SubmitAnalysisJob(id, roles)
+	if err != nil {
+		return cloud.JobStatus{}, err
+	}
+	return st, nil
 }
 
 func (a *App) GetAnalysisJobStatus(jobID string) (cloud.JobStatus, error) {
@@ -477,10 +534,14 @@ func (a *App) GetAnalysisJobStatus(jobID string) (cloud.JobStatus, error) {
 	if err != nil {
 		return cloud.JobStatus{}, err
 	}
-	return cli.GetAnalysisJob(jobID)
+	st, err := cli.GetAnalysisJob(jobID)
+	if err != nil {
+		return cloud.JobStatus{}, err
+	}
+	return st, nil
 }
 
-func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string) (store.AnalysisReport, error) {
+func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string, original string, proposed string) (store.AnalysisReport, error) {
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {
 		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
@@ -490,12 +551,17 @@ func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string) 
 		return store.AnalysisReport{}, err
 	}
 	root := store.ResolveProjectRoot(projectPath)
+	if err := a.persistResult(detail, root, body, original, proposed, `{"kind":"saved","analysis_id":"`+detail.ID+`"}`); err != nil {
+		return store.AnalysisReport{}, err
+	}
 	return s.SaveAnalysisReport(store.AnalysisReport{
 		AnalysisID:    detail.ID,
 		AnalysisLabel: detail.Label,
 		ProjectPath:   root,
-		UsesAI:        true,
+		UsesAI:        detail.UsesAI,
 		Body:          body,
+		Original:      original,
+		Proposed:      proposed,
 	})
 }
 

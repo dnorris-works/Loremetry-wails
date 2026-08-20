@@ -14,6 +14,8 @@ export function AdminQueryTable(arg1:string,arg2:number,arg3:number):Promise<sto
 
 export function AdminTableSchema(arg1:string):Promise<store.AdminSchema>;
 
+export function AnalysisRunQueue(arg1:string):Promise<Array<string>>;
+
 export function ClearFolderLink(arg1:string,arg2:number,arg3:string):Promise<store.DeletedResult>;
 
 export function ClearHeaderOverride(arg1:string,arg2:string):Promise<store.DeletedResult>;
@@ -79,8 +81,6 @@ export function GetAnalysis(arg1:string):Promise<store.AnalysisDetail>;
 export function GetAnalysisJobStatus(arg1:string):Promise<cloud.JobStatus>;
 
 export function GetAnalysisReport(arg1:number):Promise<store.AnalysisReport>;
-
-export function GetAnalysisReportBodyRange(arg1:number,arg2:number,arg3:number):Promise<store.ReportBodyRange>;
 
 export function GetChapter(arg1:number):Promise<store.Chapter>;
 
@@ -148,6 +148,8 @@ export function OpenBillingCheckout():Promise<void>;
 
 export function OpenDiskFile(arg1:string,arg2:string):Promise<store.OpenedFile>;
 
+export function PersistAnalysisResult(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<store.AnalysisReport>;
+
 export function PickImportFolder():Promise<string>;
 
 export function PlaceHeaderFiles(arg1:store.HeaderPlaceInput):Promise<store.UpdatedResult>;
@@ -180,7 +182,7 @@ export function ReorderStories(arg1:number,arg2:store.IDList):Promise<store.Upda
 
 export function RunAnalysis(arg1:string,arg2:string):Promise<store.AnalysisReport>;
 
-export function SaveAnalysisJobReport(arg1:string,arg2:string,arg3:string):Promise<store.AnalysisReport>;
+export function SaveAnalysisJobReport(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<store.AnalysisReport>;
 
 export function SetDraftSection(arg1:string,arg2:boolean):Promise<store.RenameCount>;
 

@@ -156,7 +156,7 @@ export function DocumentPane() {
       </div>);
     }
     if (!loaded || loaded.key !== key) {
-        return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+        return <div className="h-full"/>;
     }
     if (largeFile) {
         return (<div className="flex h-full flex-col">
