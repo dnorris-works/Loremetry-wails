@@ -80,6 +80,8 @@ export function GetAnalysisJobStatus(arg1:string):Promise<cloud.JobStatus>;
 
 export function GetAnalysisReport(arg1:number):Promise<store.AnalysisReport>;
 
+export function GetAnalysisReportBodyRange(arg1:number,arg2:number,arg3:number):Promise<store.ReportBodyRange>;
+
 export function GetChapter(arg1:number):Promise<store.Chapter>;
 
 export function GetCharacter(arg1:number):Promise<store.CharacterProfile>;
@@ -108,7 +110,7 @@ export function ListActs(arg1:number):Promise<Array<store.StoryAct>>;
 
 export function ListAnalysisCatalog():Promise<Array<store.AnalysisGroup>>;
 
-export function ListAnalysisReports():Promise<Array<store.AnalysisReport>>;
+export function ListAnalysisReports():Promise<Array<store.AnalysisReportSummary>>;
 
 export function ListChapters(arg1:number):Promise<Array<store.Chapter>>;
 

@@ -31,6 +31,7 @@ type App struct {
 	watchMu   sync.Mutex
 	watchStop chan struct{}
 	syncing   bool
+	busy      bool
 }
 
 func NewApp() *App {
@@ -312,25 +313,29 @@ func (a *App) WriteDiskFileSection(dir string, name string, index int, text stri
 }
 
 func (a *App) WriteDiskFile(in store.DiskFileWrite) (store.DiskFile, error) {
-	return store.WriteDiskFile(in)
+	return withBusy(a, func() (store.DiskFile, error) { return store.WriteDiskFile(in) })
 }
 
 func (a *App) CreateDiskFile(dir string, name string, text string) (store.DiskFile, error) {
-	out, err := store.CreateDiskFile(dir, name, text)
-	if err != nil {
-		return store.DiskFile{}, err
-	}
-	a.startFolderWatch()
-	return out, nil
+	return withBusy(a, func() (store.DiskFile, error) {
+		out, err := store.CreateDiskFile(dir, name, text)
+		if err != nil {
+			return store.DiskFile{}, err
+		}
+		a.startFolderWatch()
+		return out, nil
+	})
 }
 
 func (a *App) CreateDiskFiles(dir string, files []store.IncomingFile) (store.DiskFile, error) {
-	out, err := store.CreateDiskFiles(dir, files)
-	if err != nil {
-		return store.DiskFile{}, err
-	}
-	a.startFolderWatch()
-	return out, nil
+	return withBusy(a, func() (store.DiskFile, error) {
+		out, err := store.CreateDiskFiles(dir, files)
+		if err != nil {
+			return store.DiskFile{}, err
+		}
+		a.startFolderWatch()
+		return out, nil
+	})
 }
 
 func (a *App) ListAnalysisCatalog() []store.AnalysisGroup {
@@ -346,6 +351,10 @@ func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
 }
 
 func (a *App) RunAnalysis(id string, projectPath string) (store.AnalysisReport, error) {
+	return withBusy(a, func() (store.AnalysisReport, error) { return a.runAnalysis(id, projectPath) })
+}
+
+func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, error) {
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {
 		return store.AnalysisReport{}, fmt.Errorf("unknown analysis")
@@ -397,7 +406,7 @@ func (a *App) RunAnalysis(id string, projectPath string) (store.AnalysisReport, 
 	})
 }
 
-func (a *App) ListAnalysisReports() ([]store.AnalysisReport, error) {
+func (a *App) ListAnalysisReports() ([]store.AnalysisReportSummary, error) {
 	s, err := a.ready()
 	if err != nil {
 		return nil, err
@@ -411,6 +420,14 @@ func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
 		return store.AnalysisReport{}, err
 	}
 	return s.GetAnalysisReport(id)
+}
+
+func (a *App) GetAnalysisReportBodyRange(id int64, offset int, limit int) (store.ReportBodyRange, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.ReportBodyRange{}, err
+	}
+	return s.GetAnalysisReportBodyRange(id, offset, limit)
 }
 
 func (a *App) DeleteAnalysisReport(id int64) error {

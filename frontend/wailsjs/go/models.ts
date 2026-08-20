@@ -275,7 +275,9 @@ export namespace store {
 	    analysis_label: string;
 	    project_path: string;
 	    uses_ai: boolean;
-	    body: string;
+	    body?: string;
+	    large?: boolean;
+	    body_size?: number;
 	    created_at: string;
 	
 	    static createFrom(source: any = {}) {
@@ -290,6 +292,32 @@ export namespace store {
 	        this.project_path = source["project_path"];
 	        this.uses_ai = source["uses_ai"];
 	        this.body = source["body"];
+	        this.large = source["large"];
+	        this.body_size = source["body_size"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class AnalysisReportSummary {
+	    id: number;
+	    analysis_id: string;
+	    analysis_label: string;
+	    project_path: string;
+	    uses_ai: boolean;
+	    body_size: number;
+	    created_at: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AnalysisReportSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.analysis_id = source["analysis_id"];
+	        this.analysis_label = source["analysis_label"];
+	        this.project_path = source["project_path"];
+	        this.uses_ai = source["uses_ai"];
+	        this.body_size = source["body_size"];
 	        this.created_at = source["created_at"];
 	    }
 	}
@@ -1125,6 +1153,26 @@ export namespace store {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.section = source["section"];
 	        this.renamed = source["renamed"];
+	    }
+	}
+	export class ReportBodyRange {
+	    id: number;
+	    text: string;
+	    start: number;
+	    end: number;
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReportBodyRange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.text = source["text"];
+	        this.start = source["start"];
+	        this.end = source["end"];
+	        this.total = source["total"];
 	    }
 	}
 	export class Series {

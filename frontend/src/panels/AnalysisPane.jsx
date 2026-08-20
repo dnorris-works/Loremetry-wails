@@ -1,23 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Save, Trash2, X } from 'lucide-react';
-import { marked } from 'marked';
+import { LazySavedReport, MarkdownReport, REPORT_INLINE_MAX } from '@/editor/LazyReportViewer';
 
 function usesAI(detail) {
     return !!(detail?.uses_ai ?? detail?.usesAI);
-}
-
-function MarkdownReport({ text }) {
-    const html = marked.parse(text || '', { breaks: true });
-    return (
-        <div
-            className="prose prose-sm dark:prose-invert max-w-3xl"
-            dangerouslySetInnerHTML={{ __html: html }}
-        />
-    );
 }
 
 function progressLabel(status, step, stepTotal) {
@@ -213,6 +203,10 @@ export function ReportPane() {
             cancelled = true;
         };
     }, [reportId]);
+    const loadRange = useCallback(
+        (offset, limit) => api.getAnalysisReportBodyRange(reportId, offset, limit),
+        [reportId],
+    );
     async function handleDelete() {
         if (!(await confirm('Delete this report?')))
             return;
@@ -224,6 +218,8 @@ export function ReportPane() {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
     }
     const ai = !!(report.uses_ai ?? report.usesAI);
+    const bodySize = report.body_size ?? report.bodySize ?? report.body?.length ?? 0;
+    const large = !!(report.large || bodySize > REPORT_INLINE_MAX);
     return (<div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <div className="min-w-0 flex-1">
@@ -242,8 +238,10 @@ export function ReportPane() {
           <X className="h-4 w-4"/>
         </Button>
       </div>
-      <div className="flex-1 overflow-auto p-6">
-        <MarkdownReport text={report.body}/>
+      <div className="flex-1 overflow-hidden">
+        {large
+            ? <LazySavedReport reportId={reportId} bodySize={bodySize} loadRange={loadRange}/>
+            : <div className="h-full overflow-auto p-6"><MarkdownReport text={report.body}/></div>}
       </div>
     </div>);
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const maxHashBytes = 8 << 20
+const maxHashBytes = 256 << 10 // 256 KB — larger files use size+modtime
 
 func (s *Store) SyncDiskHashes(root string) (bool, error) {
 	root = filepath.Clean(strings.TrimSpace(root))

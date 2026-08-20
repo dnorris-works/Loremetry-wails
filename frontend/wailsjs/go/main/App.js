@@ -154,6 +154,10 @@ export function GetAnalysisReport(arg1) {
   return window['go']['main']['App']['GetAnalysisReport'](arg1);
 }
 
+export function GetAnalysisReportBodyRange(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetAnalysisReportBodyRange'](arg1, arg2, arg3);
+}
+
 export function GetChapter(arg1) {
   return window['go']['main']['App']['GetChapter'](arg1);
 }

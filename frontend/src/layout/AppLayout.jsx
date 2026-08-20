@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Sidebar } from '@/panels/Sidebar';
@@ -10,8 +10,12 @@ import { AdminDialog, SettingsDialog } from '@/dialogs/AppDialogs';
 const LAYOUT_KEY = 'loremetry_panel_layout';
 export function AppLayout() {
     const { bumpRefresh, ensureOpenSeries, ensureOpenStory } = useAppState();
+    const refreshTimer = useRef(0);
     useEffect(() => {
-        return EventsOn('folders-changed', () => bumpRefresh());
+        return EventsOn('folders-changed', () => {
+            window.clearTimeout(refreshTimer.current);
+            refreshTimer.current = window.setTimeout(() => bumpRefresh(), 500);
+        });
     }, [bumpRefresh]);
     const [seriesOpen, setSeriesOpen] = useState(false);
     const [editSeriesPath, setEditSeriesPath] = useState('');
