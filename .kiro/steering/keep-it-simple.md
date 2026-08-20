@@ -1,0 +1,10 @@
+---
+inclusion: always
+---
+
+# Simple, standard code
+
+- Follow ordinary practice for Wails, Go, React, SQLite, and Lexical. Do not invent extra layers.
+- Prefer a short, obvious solution over a clever one. Delete dead compatibility code.
+- This app uses its own `loremetry-app.db`. Do not write migrations for the older `loremetry.db`.
+- Load data, then render. Do not mount the editor with empty content and patch it later.
