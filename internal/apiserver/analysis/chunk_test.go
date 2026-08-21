@@ -1,6 +1,12 @@
 package analysis
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+
+	appdb "loremetry/internal/db"
+	"loremetry/internal/store"
+)
 
 func TestSplitManuscriptBySize(t *testing.T) {
 	text := string(make([]byte, 25000))
@@ -14,6 +20,14 @@ func TestSplitManuscriptBySize(t *testing.T) {
 }
 
 func TestProfileForChunked(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+	conn, err := appdb.Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	store.SetCatalogDB(conn)
+
 	if ProfileFor("analysis") != ProfileChunked {
 		t.Fatal("expected chunked profile for analysis")
 	}

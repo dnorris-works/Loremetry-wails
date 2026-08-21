@@ -7,6 +7,19 @@ import (
 	appdb "loremetry/internal/db"
 )
 
+// ensureCatalogDB opens a migrated DB and sets catalogDB for tests that don't
+// need a full Store but still depend on the analysis_catalog table.
+func ensureCatalogDB(t *testing.T) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "loremetry.db")
+	conn, err := appdb.Open(path)
+	if err != nil {
+		t.Fatalf("open catalog db: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	SetCatalogDB(conn)
+}
+
 func testStore(t *testing.T) *Store {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "loremetry.db")
@@ -15,6 +28,7 @@ func testStore(t *testing.T) *Store {
 		t.Fatalf("open: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
+	SetCatalogDB(conn)
 	uid, err := appdb.LocalUserID(conn)
 	if err != nil {
 		t.Fatalf("user: %v", err)

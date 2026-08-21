@@ -50,6 +50,36 @@ func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 		dataJSON = `{"kind":"vellum_prep"}`
 	case "zeigarnik_analysis":
 		original, proposed, dataJSON = runZeigarnik(blobs)
+	case "readability_score":
+		content = runReadabilityScore(blobs)
+		dataJSON = `{"kind":"readability_score"}`
+	case "sentence_length_variation":
+		content = runSentenceLengthVariation(blobs)
+		dataJSON = `{"kind":"sentence_length_variation"}`
+	case "chapter_balance":
+		content = runChapterBalance(blobs)
+		dataJSON = `{"kind":"chapter_balance"}`
+	case "dialogue_ratio":
+		content = runDialogueRatio(blobs)
+		dataJSON = `{"kind":"dialogue_ratio"}`
+	case "dialogue_tag_audit":
+		content = runDialogueTagAudit(blobs)
+		dataJSON = `{"kind":"dialogue_tag_audit"}`
+	case "passive_voice":
+		content = runPassiveVoice(blobs)
+		dataJSON = `{"kind":"passive_voice"}`
+	case "sticky_sentences":
+		content = runStickySentences(blobs)
+		dataJSON = `{"kind":"sticky_sentences"}`
+	case "repeated_phrases":
+		content = runRepeatedPhrases(blobs)
+		dataJSON = `{"kind":"repeated_phrases"}`
+	case "paragraph_length":
+		content = runParagraphLength(blobs)
+		dataJSON = `{"kind":"paragraph_length"}`
+	case "opening_closing":
+		content = runOpeningClosing(blobs)
+		dataJSON = `{"kind":"opening_closing"}`
 	default:
 		return AnalysisRunResult{}, fmt.Errorf("this analysis cannot run yet")
 	}

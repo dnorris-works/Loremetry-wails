@@ -39,6 +39,7 @@ func TestUpsertAnalysisResult(t *testing.T) {
 }
 
 func TestAnalysisRunQueue(t *testing.T) {
+	ensureCatalogDB(t)
 	q := AnalysisRunQueue("genre_analysis")
 	if len(q) < 2 || q[len(q)-1] != "genre_analysis" || q[0] != "chapter_summaries" {
 		t.Fatalf("%v", q)

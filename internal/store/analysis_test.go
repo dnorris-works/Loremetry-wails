@@ -3,8 +3,9 @@ package store
 import "testing"
 
 func TestAnalysisCatalog(t *testing.T) {
+	ensureCatalogDB(t)
 	groups := AnalysisCatalog()
-	if len(groups) != 8 {
+	if len(groups) != 9 {
 		t.Fatalf("groups %d", len(groups))
 	}
 	n := 0

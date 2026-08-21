@@ -9,4 +9,5 @@ bin/
 *.db
 *.log
 .DS_Store
+.kiro/specs
 

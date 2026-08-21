@@ -8,6 +8,7 @@ import (
 )
 
 func TestRunLocalPrintProduction(t *testing.T) {
+	ensureCatalogDB(t)
 	root := t.TempDir()
 	ch := filepath.Join(root, "01_Manuscript", "01_Chapters")
 	if err := os.MkdirAll(ch, 0o755); err != nil {
@@ -40,6 +41,7 @@ func TestRunLocalPrintProduction(t *testing.T) {
 }
 
 func TestRunZeigarnikMerge(t *testing.T) {
+	ensureCatalogDB(t)
 	root := t.TempDir()
 	ch := filepath.Join(root, "01_Manuscript", "01_Chapters")
 	if err := os.MkdirAll(ch, 0o755); err != nil {

@@ -51,6 +51,7 @@ func (a *App) startup(ctx context.Context) {
 		a.dbErr = err
 		return
 	}
+	store.SetCatalogDB(conn)
 	uid, err := appdb.LocalUserID(conn)
 	if err != nil {
 		a.dbErr = err

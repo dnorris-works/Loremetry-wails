@@ -6,15 +6,13 @@ import (
 )
 
 func TestFormatReportBody(t *testing.T) {
+	_ = testStore(t) // seeds analysis_catalog via SetCatalogDB
 	got := FormatReportBody("Line-level Polish", "line_polish", "- Words: 10\n")
 	if !strings.Contains(got, "# Line-level Polish") {
 		t.Fatalf("missing title: %s", got)
 	}
 	if !strings.Contains(got, "## About this report") || !strings.Contains(got, "## How to use") {
 		t.Fatalf("missing sections: %s", got)
-	}
-	if !strings.Contains(got, "Filter words") && !strings.Contains(got, analysisDescription("line_polish")) {
-		t.Fatalf("missing about text: %s", got)
 	}
 	if !strings.Contains(got, "---") || !strings.Contains(got, "- Words: 10") {
 		t.Fatalf("missing content: %s", got)

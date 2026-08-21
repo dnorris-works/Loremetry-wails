@@ -1,6 +1,9 @@
 package analysis
 
-import "strings"
+import (
+	"loremetry/internal/store"
+	"strings"
+)
 
 type Source struct {
 	Role string `json:"role"`
@@ -61,10 +64,10 @@ const (
 )
 
 func ProfileFor(analysisID string) Profile {
-	switch analysisID {
-	case "analysis", "wide_analysis", "review_mining", "ai_beta_reader", "competition_report":
+	switch store.AIProfile(analysisID) {
+	case "chunked":
 		return ProfileChunked
-	case "thematic_throughline", "continuity_check", "cross_book_setup_payoff", "series_pacing_comparator", "recurring_motif_theme_series":
+	case "two_step":
 		return ProfileTwoStep
 	default:
 		return ProfileSingle

@@ -7,6 +7,7 @@ import (
 )
 
 func TestFilterWritingTreeHidesNamedFolders(t *testing.T) {
+	ensureCatalogDB(t)
 	root := t.TempDir()
 	pen := filepath.Join(root, "Ada")
 	book, err := ApplyBookTemplate(pen, "Tale", "", "")

@@ -8,8 +8,15 @@ import (
 // FormatReportBody prepends the standard About / How to use header to report content.
 // The full markdown (header + body) is what gets saved in analysis_reports.body.
 func FormatReportBody(label, analysisID, content string) string {
-	about := strings.TrimSpace(analysisDescription(analysisID))
-	usage := strings.TrimSpace(analysisUsage(analysisID))
+	var about, usage string
+	if catalogDB != nil {
+		_ = catalogDB.QueryRow(
+			`SELECT description, usage FROM analysis_catalog WHERE id = ?`,
+			analysisID,
+		).Scan(&about, &usage)
+	}
+	about = strings.TrimSpace(about)
+	usage = strings.TrimSpace(usage)
 	content = strings.TrimSpace(content)
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s\n\n", strings.TrimSpace(label))
