@@ -151,7 +151,7 @@ CREATE TABLE analysis_catalog (
 
 -- Group: KDP / Wide
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('chapter_summaries', 'kdp-wide', 'KDP / Wide', 'Chapter Summaries', 'AI genre-signal summary per chapter. Required by most KDP and Wide analyses.', 'Run this first for KDP/Wide stacks, or select a dependent analysis and it will be included automatically.', '["manuscript"]', '[]', 1, 0, 'single', 1);
+  ('chapter_summaries', 'kdp-wide', 'KDP / Wide', 'Chapter Summaries', 'AI genre-signal summary per chapter. Required by most KDP and Wide analyses.', 'Run this first for KDP/Wide stacks, or select a dependent analysis and it will be included automatically.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 1);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('analysis', 'kdp-wide', 'KDP / Wide', 'KDP Analysis', 'Genre, Kindle and paperback categories, print BISAC, seven keywords, and ready-to-paste KDP metadata.', 'Copy categories, BISAC, and keywords into KDP. Save this report before you change the manuscript.', '["manuscript","plot"]', '["chapter_summaries","mi_search_terms"]', 1, 0, 'chunked', 2);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -181,37 +181,37 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('google_keyword_search', 'kdp-wide', 'KDP / Wide', 'Google Keyword Search', 'Google search volume for wide-store phrases.', 'Prioritize phrases with real search volume when filling wide discovery keywords.', '["manuscript"]', '["chapter_summaries","discovery_keywords"]', 1, 0, 'single', 15);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('content_maturity_advisory', 'kdp-wide', 'KDP / Wide', 'Content & Maturity Advisory', 'Heat level, content warnings, and age guidance for wide stores.', 'Match store maturity settings and content warnings to the advisory below.', '["manuscript"]', '["chapter_summaries"]', 1, 0, 'single', 16);
+  ('content_maturity_advisory', 'kdp-wide', 'KDP / Wide', 'Content & Maturity Advisory', 'Heat level, content warnings, and age guidance for wide stores.', 'Match store maturity settings and content warnings to the advisory below.', '["manuscript"]', '["chapter_summaries"]', 1, 0, 'by_chapter', 16);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('wide_metadata_paste', 'kdp-wide', 'KDP / Wide', 'Wide Metadata Paste Sheet', 'Copy-ready wide metadata for aggregators and stores.', 'Copy each block into the matching aggregator or store metadata field.', '["plot"]', '["bisac_classification","discovery_keywords"]', 1, 0, 'single', 17);
 
 -- Group: Craft — Prose
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('show_dont_tell', 'prose', 'Craft — Prose', 'Show Don''t Tell', 'Flags passages that tell emotion or judgment instead of showing it.', 'Rewrite flagged telling passages to show emotion through action and sensory detail.', '["manuscript"]', '[]', 1, 0, 'single', 18);
+  ('show_dont_tell', 'prose', 'Craft — Prose', 'Show Don''t Tell', 'Flags passages that tell emotion or judgment instead of showing it.', 'Rewrite flagged telling passages to show emotion through action and sensory detail.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 18);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('ai_isms', 'prose', 'Craft — Prose', 'AI-isms', 'Flags prose that often reads as machine-generated.', 'Revise flagged lines so they sound like your voice, not generic machine prose.', '["manuscript"]', '[]', 1, 0, 'single', 19);
+  ('ai_isms', 'prose', 'Craft — Prose', 'AI-isms', 'Flags prose that often reads as machine-generated.', 'Revise flagged lines so they sound like your voice, not generic machine prose.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 19);
 
 -- Group: Craft — Structure & Pacing
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('story_beat_placement', 'structure', 'Craft — Structure & Pacing', 'Story Beat Placement', 'Beat timing against common story frameworks.', 'Move, add, or cut beats so structural milestones land where the framework expects.', '["manuscript"]', '[]', 1, 0, 'single', 20);
+  ('story_beat_placement', 'structure', 'Craft — Structure & Pacing', 'Story Beat Placement', 'Beat timing against common story frameworks.', 'Move, add, or cut beats so structural milestones land where the framework expects.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 20);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('scene_sequel_balance', 'structure', 'Craft — Structure & Pacing', 'Scene/Sequel Balance', 'Action vs reflective passages and where momentum stalls.', 'Add action or reflection where the report shows momentum stalling.', '["manuscript"]', '[]', 1, 0, 'single', 21);
+  ('scene_sequel_balance', 'structure', 'Craft — Structure & Pacing', 'Scene/Sequel Balance', 'Action vs reflective passages and where momentum stalls.', 'Add action or reflection where the report shows momentum stalling.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 21);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('pov_discipline', 'structure', 'Craft — Structure & Pacing', 'POV Discipline', 'POV shifts, head-hopping, and information leaks.', 'Fix head-hops and information leaks so each scene stays in the intended POV.', '["manuscript"]', '[]', 1, 0, 'single', 22);
+  ('pov_discipline', 'structure', 'Craft — Structure & Pacing', 'POV Discipline', 'POV shifts, head-hopping, and information leaks.', 'Fix head-hops and information leaks so each scene stays in the intended POV.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 22);
 
 -- Group: Craft — Plot & Continuity
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('continuity_check', 'plot', 'Craft — Plot & Continuity', 'Continuity Check', 'Finds contradicted facts in a manuscript or across a series.', 'Fix contradicted facts in the manuscript (or series bible) before the next draft pass.', '["manuscript","characters","locations"]', '[]', 1, 0, 'two_step', 23);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('chekhovs_gun', 'plot', 'Craft — Plot & Continuity', 'Chekhov''s Gun', 'Early setups (objects, skills, promises) and whether they pay off.', 'Pay off unused setups or cut them so early mentions earn their keep.', '["manuscript"]', '[]', 1, 0, 'single', 24);
+  ('chekhovs_gun', 'plot', 'Craft — Plot & Continuity', 'Chekhov''s Gun', 'Early setups (objects, skills, promises) and whether they pay off.', 'Pay off unused setups or cut them so early mentions earn their keep.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 24);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('red_herring_vs_abandoned', 'plot', 'Craft — Plot & Continuity', 'Red Herring vs Abandoned', 'Separates intentional misdirection from dropped plot threads.', 'Keep intentional misdirection; restore or remove dropped threads.', '["manuscript"]', '[]', 1, 0, 'single', 25);
+  ('red_herring_vs_abandoned', 'plot', 'Craft — Plot & Continuity', 'Red Herring vs Abandoned', 'Separates intentional misdirection from dropped plot threads.', 'Keep intentional misdirection; restore or remove dropped threads.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 25);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('foreshadowing_twist_fairness', 'plot', 'Craft — Plot & Continuity', 'Foreshadowing & Twist Fairness', 'Whether foreshadowing is fair and twists feel earned.', 'Add fair clues where twists feel cheap; trim over-telegraphing where they feel obvious.', '["manuscript"]', '[]', 1, 0, 'single', 26);
+  ('foreshadowing_twist_fairness', 'plot', 'Craft — Plot & Continuity', 'Foreshadowing & Twist Fairness', 'Whether foreshadowing is fair and twists feel earned.', 'Add fair clues where twists feel cheap; trim over-telegraphing where they feel obvious.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 26);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('macguffin_clarity', 'plot', 'Craft — Plot & Continuity', 'MacGuffin Clarity', 'Whether the driving object or goal is clear and motivates action.', 'Clarify the driving object or goal if characters (or readers) lose track of why it matters.', '["manuscript"]', '[]', 1, 0, 'single', 27);
+  ('macguffin_clarity', 'plot', 'Craft — Plot & Continuity', 'MacGuffin Clarity', 'Whether the driving object or goal is clear and motivates action.', 'Clarify the driving object or goal if characters (or readers) lose track of why it matters.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 27);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('timeline_flashback', 'plot', 'Craft — Plot & Continuity', 'Timeline / Flashback', 'Whether timeline shifts and flashbacks clarify or confuse.', 'Clarify or cut flashbacks that confuse chronology rather than deepen stakes.', '["manuscript"]', '[]', 1, 0, 'single', 28);
+  ('timeline_flashback', 'plot', 'Craft — Plot & Continuity', 'Timeline / Flashback', 'Whether timeline shifts and flashbacks clarify or confuse.', 'Clarify or cut flashbacks that confuse chronology rather than deepen stakes.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 28);
 
 -- Group: Craft — Character & Theme
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -225,9 +225,9 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('zeigarnik_analysis', 'engagement', 'Craft — Reader Engagement', 'Zeigarnik Effect', 'Heuristic scan for open loops, cliffhangers, and unresolved threads. No AI.', 'Use Compare to review flagged chapter endings; strengthen weak open loops and leave intentional closures alone.', '["manuscript"]', '[]', 0, 1, 'single', 32);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('dramatic_irony', 'engagement', 'Craft — Reader Engagement', 'Dramatic Irony', 'Moments the reader knows more than the characters.', 'Lean into reader-knows-more moments where tension or humor pays off.', '["manuscript"]', '[]', 1, 0, 'single', 33);
+  ('dramatic_irony', 'engagement', 'Craft — Reader Engagement', 'Dramatic Irony', 'Moments the reader knows more than the characters.', 'Lean into reader-knows-more moments where tension or humor pays off.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 33);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('stakes_escalation', 'engagement', 'Craft — Reader Engagement', 'Stakes Escalation', 'How stakes rise, plateau, or reverse across the arc.', 'Raise or reset stakes where the arc plateaus; cut reversals that undercut tension.', '["manuscript"]', '[]', 1, 0, 'single', 34);
+  ('stakes_escalation', 'engagement', 'Craft — Reader Engagement', 'Stakes Escalation', 'How stakes rise, plateau, or reverse across the arc.', 'Raise or reset stakes where the arc plateaus; cut reversals that undercut tension.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 34);
 
 -- Group: Craft — Series
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -243,13 +243,13 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('print_production', 'publish', 'Publish', 'Print Production', 'Page count, trim, spine, and print checklists from word count. No AI.', 'Use word count and spine estimates when choosing trim and ordering a KDP/Ingram cover template.', '["manuscript"]', '[]', 0, 0, 'single', 39);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('ai_beta_reader', 'publish', 'Publish', 'AI Beta Reader', 'Chapter-by-chapter reader reactions, engagement, and put-down risk.', 'Prioritize chapters with high put-down risk; revise hooks and endings there first.', '["manuscript"]', '[]', 1, 0, 'chunked', 40);
+  ('ai_beta_reader', 'publish', 'Publish', 'AI Beta Reader', 'Chapter-by-chapter reader reactions, engagement, and put-down risk.', 'Prioritize chapters with high put-down risk; revise hooks and endings there first.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 40);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('cliffhanger_score', 'publish', 'Publish', 'Cliffhanger Score', 'How hard each chapter ending pulls into the next.', 'Strengthen weak chapter endings so readers turn the page.', '["manuscript"]', '[]', 1, 0, 'single', 41);
+  ('cliffhanger_score', 'publish', 'Publish', 'Cliffhanger Score', 'How hard each chapter ending pulls into the next.', 'Strengthen weak chapter endings so readers turn the page.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 41);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('hook_strength', 'publish', 'Publish', 'Hook Strength', 'Whether a browsing reader would keep going past page one.', 'Rewrite the opening if a browsing reader would stop before page two.', '["manuscript"]', '[]', 1, 0, 'single', 42);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('pacing_curve', 'publish', 'Publish', 'Pacing Curve', 'Per-chapter pace and drag-risk scores.', 'Trim or split chapters marked as drag risk; keep high-pace chapters intact.', '["manuscript"]', '[]', 1, 0, 'single', 43);
+  ('pacing_curve', 'publish', 'Publish', 'Pacing Curve', 'Per-chapter pace and drag-risk scores.', 'Trim or split chapters marked as drag risk; keep high-pace chapters intact.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 43);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('line_polish', 'publish', 'Publish', 'Line-level Polish', 'Filter words, echoes, adverbs, and rough passives. No AI.', 'Search the manuscript for listed filter words and echoes; cut or replace the worst repeats.', '["manuscript"]', '[]', 0, 0, 'single', 44);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES

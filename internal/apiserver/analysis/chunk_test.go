@@ -49,4 +49,7 @@ func TestProfileForChunked(t *testing.T) {
 	if ProfileFor("genre_analysis") != ProfileSingle {
 		t.Fatal("expected single profile for genre_analysis")
 	}
+	if ProfileFor("ai_beta_reader") != ProfileByChapter {
+		t.Fatal("expected by_chapter profile for ai_beta_reader")
+	}
 }

@@ -17,6 +17,8 @@ export function AdminTableSchema(arg1:string):Promise<store.AdminSchema>;
 
 export function AnalysisRunQueue(arg1:string):Promise<Array<string>>;
 
+export function CancelAnalysisJob(arg1:string):Promise<void>;
+
 export function ClearFolderLink(arg1:string,arg2:number,arg3:string):Promise<store.DeletedResult>;
 
 export function ClearHeaderOverride(arg1:string,arg2:string):Promise<store.DeletedResult>;

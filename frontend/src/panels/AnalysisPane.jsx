@@ -3,7 +3,7 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { Save, Trash2, X, FileDown } from 'lucide-react';
+import { Save, Trash2, X, FileDown, Square } from 'lucide-react';
 import { MarkdownReport } from '@/editor/MarkdownReport';
 import { StickyChapterDialog } from '@/editor/StickyChapterDialog';
 import { VisualCompareView } from '@/editor/VisualCompareView';
@@ -97,6 +97,8 @@ export function AnalysisPane() {
     const detailRef = useRef(null);
     const queueRef = useRef([]);
     const queueLabelsRef = useRef([]);
+    const activeJobIdRef = useRef('');
+    const stopRequestedRef = useRef(false);
 
     useEffect(() => {
         if (!analysisId) {
@@ -206,13 +208,16 @@ export function AnalysisPane() {
     async function runOne(id) {
         const info = await api.getAnalysis(id);
         if (usesAI(info)) {
+            if (stopRequestedRef.current)
+                return { cancelled: true };
             let job = await api.startAnalysisJob(id, projectPath);
             const startEst = job.estimate_sec || job.estimateSec || 0;
             if (startEst > 0)
                 setEstimateSec(startEst);
             if (!(job.cached || job.status === 'done')) {
                 const jobID = job.job_id || job.jobId;
-                while (job.status !== 'done' && job.status !== 'failed') {
+                activeJobIdRef.current = jobID || '';
+                while (job.status !== 'done' && job.status !== 'failed' && job.status !== 'cancelled') {
                     const est = job.estimate_sec || job.estimateSec || 0;
                     if (est > 0)
                         setEstimateSec(est);
@@ -220,6 +225,9 @@ export function AnalysisPane() {
                     await sleep(1000);
                     job = await api.getAnalysisJobStatus(jobID);
                 }
+                activeJobIdRef.current = '';
+                if (job.status === 'cancelled' || stopRequestedRef.current)
+                    return { cancelled: true };
                 if (job.status === 'failed') {
                     throw new Error(job.error || 'Analysis failed');
                 }
@@ -229,7 +237,23 @@ export function AnalysisPane() {
             const prop = job.proposed || job.Proposed || '';
             return api.persistAnalysisResult(id, projectPath, bodyText, orig, prop, '');
         }
+        if (stopRequestedRef.current)
+            return { cancelled: true };
         return api.runAnalysis(id, projectPath);
+    }
+
+    async function stopAnalysis() {
+        stopRequestedRef.current = true;
+        setLiveProgress('Stopping…');
+        const jobID = activeJobIdRef.current;
+        if (jobID) {
+            try {
+                await api.cancelAnalysisJob(jobID);
+            }
+            catch {
+                /* job may already be finished */
+            }
+        }
     }
 
     async function run() {
@@ -237,21 +261,34 @@ export function AnalysisPane() {
         if (!current || busyRef.current) return;
         const runQueue = queueRef.current.length ? queueRef.current : [current.id];
         const labels = queueLabelsRef.current;
+        stopRequestedRef.current = false;
+        activeJobIdRef.current = '';
         setBusy(true);
         setNotice('');
         setEstimateSec(0);
         setLiveProgress('');
         try {
             let primary = null;
+            let stopped = false;
             for (let i = 0; i < runQueue.length; i++) {
+                if (stopRequestedRef.current) {
+                    stopped = true;
+                    break;
+                }
                 const id = runQueue[i];
                 const label = labels[i] || id;
                 setLiveProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…');
                 const report = await runOne(id);
+                if (report?.cancelled || stopRequestedRef.current) {
+                    stopped = true;
+                    break;
+                }
                 if (id === current.id)
                     primary = report;
             }
-            if (primary)
+            if (stopped)
+                setNotice('Analysis stopped');
+            else if (primary)
                 applyReport(primary, current);
         }
         catch (err) {
@@ -259,6 +296,8 @@ export function AnalysisPane() {
             setNotice(msg);
         }
         finally {
+            stopRequestedRef.current = false;
+            activeJobIdRef.current = '';
             setBusy(false);
             setProgress('');
             setEstimateSec(0);
@@ -332,6 +371,11 @@ export function AnalysisPane() {
               onNext={() => search.step(1)}
             />
           )}
+          {busy && (
+            <Button size="sm" variant="outline" onClick={() => void stopAnalysis()} className="ml-auto shrink-0 gap-1.5" title="Stop analysis">
+              <Square className="h-3 w-3 fill-current"/>Stop
+            </Button>
+          )}
           {hasOutput && isVellum && (
             <Button size="sm" variant="outline" onClick={() => void exportDocx()} className="shrink-0 gap-1.5">
               <FileDown className="h-3.5 w-3.5"/>Export DOCX
@@ -345,7 +389,7 @@ export function AnalysisPane() {
           {hasOutput && saved && (
             <span className="shrink-0 text-xs text-green-600 dark:text-green-400">Saved</span>
           )}
-          <Button size="icon" variant="ghost" className="shrink-0" onClick={() => { setBody(''); setMergeOriginal(''); setMergeProposed(''); setAnalysis(''); }} title="Close">
+          <Button size="icon" variant="ghost" className={`shrink-0 ${busy ? '' : 'ml-auto'}`} onClick={() => { setBody(''); setMergeOriginal(''); setMergeProposed(''); setAnalysis(''); }} title="Close">
             <X className="h-4 w-4"/>
           </Button>
         </div>
@@ -388,7 +432,12 @@ export function AnalysisPane() {
             </div>
           ) : notice ? (
             <div className="max-w-2xl space-y-2">
-              <p className="text-sm text-destructive">{notice}</p>
+              <p className={`text-sm ${notice === 'Analysis stopped' ? 'text-muted-foreground' : 'text-destructive'}`}>{notice}</p>
+              {notice === 'Analysis stopped' && (
+                <Button size="sm" variant="outline" onClick={() => { setNotice(''); void run(); }}>
+                  Run again
+                </Button>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Starting…</p>

@@ -2,6 +2,7 @@ package localai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -22,13 +23,17 @@ type RunStats interface {
 
 // JobStore tracks in-process local analysis jobs (same shape as cloud.JobStatus).
 type JobStore struct {
-	mu    sync.Mutex
-	jobs  map[string]*cloud.JobStatus
-	stats RunStats
+	mu      sync.Mutex
+	jobs    map[string]*cloud.JobStatus
+	cancels map[string]context.CancelFunc
+	stats   RunStats
 }
 
 func NewJobStore() *JobStore {
-	return &JobStore{jobs: map[string]*cloud.JobStatus{}}
+	return &JobStore{
+		jobs:    map[string]*cloud.JobStatus{},
+		cancels: map[string]context.CancelFunc{},
+	}
 }
 
 func (s *JobStore) SetStats(stats RunStats) {
@@ -48,6 +53,24 @@ func (s *JobStore) Get(id string) (cloud.JobStatus, bool) {
 	return out, true
 }
 
+// Cancel interrupts a running job. Returns false if the job is unknown or already finished.
+func (s *JobStore) Cancel(jobID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cancel, ok := s.cancels[jobID]
+	if !ok {
+		j, exists := s.jobs[jobID]
+		return exists && (j.Status == "running" || j.Status == "queued")
+	}
+	if j, ok := s.jobs[jobID]; ok && (j.Status == "running" || j.Status == "queued") {
+		j.Status = "cancelled"
+		j.Message = "Stopping…"
+		j.Error = "Stopped"
+	}
+	cancel()
+	return true
+}
+
 func (s *JobStore) put(j *cloud.JobStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -63,6 +86,18 @@ func (s *JobStore) update(id string, fn func(*cloud.JobStatus)) {
 		return
 	}
 	fn(j)
+}
+
+func (s *JobStore) setCancel(id string, cancel context.CancelFunc) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cancels[id] = cancel
+}
+
+func (s *JobStore) clearCancel(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.cancels, id)
 }
 
 func (s *JobStore) estimate(analysisID string) (time.Duration, bool) {
@@ -149,6 +184,13 @@ func busyMessage(label string, stepElapsed, jobElapsed, estimate time.Duration) 
 	return msg
 }
 
+func isCancelErr(err error, ctx context.Context) bool {
+	if ctx != nil && ctx.Err() != nil {
+		return true
+	}
+	return errors.Is(err, context.Canceled)
+}
+
 type heartbeatGateway struct {
 	inner  models.Gateway
 	onTick func(elapsed time.Duration)
@@ -178,8 +220,13 @@ func (g *heartbeatGateway) Complete(ctx context.Context, tier models.Tier, syste
 }
 
 func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysis.Source, estimate time.Duration) {
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
+	jobCtx, jobCancel := context.WithCancel(context.Background())
+	s.setCancel(jobID, jobCancel)
+	defer func() {
+		s.clearCancel(jobID)
+		jobCancel()
+	}()
+
 	jobStart := time.Now()
 	s.update(jobID, func(j *cloud.JobStatus) {
 		if estimate > 0 {
@@ -198,6 +245,8 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 			select {
 			case <-startDone:
 				return
+			case <-jobCtx.Done():
+				return
 			case <-t.C:
 				s.update(jobID, func(j *cloud.JobStatus) {
 					if j.Status != "running" {
@@ -208,10 +257,18 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 			}
 		}
 	}()
-	err := mgr.EnsureStarted(ctx)
+	startCtx, startCancel := context.WithTimeout(jobCtx, 120*time.Second)
+	err := mgr.EnsureStarted(startCtx)
+	startCancel()
 	close(startDone)
 	if err != nil {
 		s.update(jobID, func(j *cloud.JobStatus) {
+			if isCancelErr(err, jobCtx) {
+				j.Status = "cancelled"
+				j.Error = "Stopped"
+				j.Message = "Stopped"
+				return
+			}
 			j.Status = "failed"
 			j.Error = err.Error()
 			j.Message = ""
@@ -265,6 +322,9 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 			setLabel(label)
 			jobElapsed := time.Since(jobStart)
 			s.update(jobID, func(j *cloud.JobStatus) {
+				if j.Status == "cancelled" {
+					return
+				}
 				j.Status = "running"
 				j.Step = step
 				j.StepTotal = total
@@ -274,12 +334,29 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 	}
 	setLabel("Preparing analysis…")
 	s.update(jobID, func(j *cloud.JobStatus) {
+		if j.Status == "cancelled" {
+			return
+		}
 		j.Message = busyMessage("Preparing analysis", 0, time.Since(jobStart), estimate)
 	})
-	body, err := runner.Run(context.Background(), analysisID, sources)
+	if jobCtx.Err() != nil {
+		s.update(jobID, func(j *cloud.JobStatus) {
+			j.Status = "cancelled"
+			j.Error = "Stopped"
+			j.Message = "Stopped"
+		})
+		return
+	}
+	body, err := runner.Run(jobCtx, analysisID, sources)
 	elapsed := time.Since(jobStart)
 	s.update(jobID, func(j *cloud.JobStatus) {
 		if err != nil {
+			if isCancelErr(err, jobCtx) || j.Status == "cancelled" {
+				j.Status = "cancelled"
+				j.Error = "Stopped"
+				j.Message = "Stopped"
+				return
+			}
 			j.Status = "failed"
 			j.Error = err.Error()
 			j.Message = ""

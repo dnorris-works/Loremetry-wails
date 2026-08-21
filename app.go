@@ -580,6 +580,19 @@ func (a *App) GetAnalysisJobStatus(jobID string) (cloud.JobStatus, error) {
 	return st, nil
 }
 
+func (a *App) CancelAnalysisJob(jobID string) error {
+	if a.localJobs == nil {
+		return fmt.Errorf("local AI is not available")
+	}
+	if !strings.HasPrefix(jobID, "local-") {
+		return fmt.Errorf("unknown local job")
+	}
+	if !a.localJobs.Cancel(jobID) {
+		return fmt.Errorf("job is not running")
+	}
+	return nil
+}
+
 func (a *App) SaveAnalysisJobReport(id string, projectPath string, body string, original string, proposed string) (store.AnalysisReport, error) {
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {

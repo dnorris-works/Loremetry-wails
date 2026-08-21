@@ -26,6 +26,10 @@ export function AnalysisRunQueue(arg1) {
   return window['go']['main']['App']['AnalysisRunQueue'](arg1);
 }
 
+export function CancelAnalysisJob(arg1) {
+  return window['go']['main']['App']['CancelAnalysisJob'](arg1);
+}
+
 export function ClearFolderLink(arg1, arg2, arg3) {
   return window['go']['main']['App']['ClearFolderLink'](arg1, arg2, arg3);
 }

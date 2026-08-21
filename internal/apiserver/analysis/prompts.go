@@ -29,6 +29,8 @@ func StepPrompt(step, analysisID string, sources []Source, prior []string) strin
 		b.WriteString("Summarize this manuscript section for a later full-book analysis. Note POV, pacing, open loops, and craft issues. Analysis: ")
 	case "merge_outline":
 		b.WriteString("Merge these section summaries into one structured outline (acts, themes, issues, continuity notes). Analysis: ")
+	case "analyze_chapter":
+		b.WriteString("Analyze this single chapter for the named craft analysis. List concrete findings with short quotes or location cues. Do not write the full book report yet—chapter notes only. Analysis: ")
 	default:
 		b.WriteString("Run analysis: ")
 	}
@@ -61,6 +63,7 @@ const (
 	ProfileSingle Profile = iota
 	ProfileTwoStep
 	ProfileChunked
+	ProfileByChapter
 )
 
 func ProfileFor(analysisID string) Profile {
@@ -69,6 +72,8 @@ func ProfileFor(analysisID string) Profile {
 		return ProfileChunked
 	case "two_step":
 		return ProfileTwoStep
+	case "by_chapter":
+		return ProfileByChapter
 	default:
 		return ProfileSingle
 	}
@@ -80,6 +85,8 @@ func StepTotal(p Profile) int {
 		return 2
 	case ProfileChunked:
 		return 3
+	case ProfileByChapter:
+		return 2
 	default:
 		return 1
 	}
