@@ -22,27 +22,27 @@ func UserPrompt(analysisID string, sources []Source) string {
 
 func StepPrompt(step, analysisID string, sources []Source, prior []string) string {
 	var b strings.Builder
+	spec := ChapterNoteSpecFor(analysisID)
 	switch step {
 	case "summarize_role":
 		b.WriteString("Summarize the following source material for a later craft analysis. Preserve character names, plot beats, themes, and continuity facts. Analysis: ")
+		b.WriteString(analysisID)
 	case "summarize_chunk":
 		b.WriteString("Summarize this manuscript section for a later full-book analysis. Note POV, pacing, open loops, and craft issues. Analysis: ")
+		b.WriteString(analysisID)
 	case "merge_outline":
 		b.WriteString("Merge these section summaries into one structured outline (acts, themes, issues, continuity notes). Analysis: ")
+		b.WriteString(analysisID)
 	case "analyze_chapter":
-		if analysisID == "chapter_summaries" {
-			b.WriteString("Write a real plot summary of this single chapter for the author. Cover who is present, what happens (in order), stakes or conflict, and any open loops or unanswered questions. Use concrete names and events—no vague marketing language. Do not write the full-book document yet. Analysis: ")
-		} else {
-			b.WriteString("Analyze this single chapter for the named craft analysis. List concrete findings with short quotes or location cues. Do not write the full book report yet—chapter notes only. Analysis: ")
-		}
+		b.WriteString(spec.ChapterInstruction)
+		b.WriteString(" Analysis: ")
+		b.WriteString(analysisID)
+		b.WriteString(FormatChapterHeadings(spec.RequiredHeadings))
 	default:
-		if analysisID == "chapter_summaries" {
-			b.WriteString("Assemble an ordered chapter-by-chapter plot summary document from the chapter notes below. One section per chapter with a clear heading. Keep each summary concrete and faithful to the notes. Analysis: ")
-		} else {
-			b.WriteString("Run analysis: ")
-		}
+		b.WriteString(spec.FinalInstruction)
+		b.WriteString(" Analysis: ")
+		b.WriteString(analysisID)
 	}
-	b.WriteString(analysisID)
 	b.WriteString("\n\n")
 	for _, s := range sources {
 		b.WriteString("## ")

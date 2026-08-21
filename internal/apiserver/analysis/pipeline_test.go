@@ -19,8 +19,9 @@ type mockGateway struct {
 func (m *mockGateway) Complete(ctx context.Context, tier models.Tier, system, user string) (string, models.Usage, error) {
 	step := "other"
 	switch {
-	case strings.Contains(user, "Analyze this single chapter"),
-		strings.Contains(user, "Write a real plot summary of this single chapter"):
+	case strings.Contains(user, "Required headings (use exactly)"),
+		strings.Contains(user, "Write a real plot summary of this single chapter"),
+		strings.Contains(user, "chapter notes only"):
 		step = "analyze_chapter"
 	case strings.Contains(user, "Summarize this manuscript section"):
 		step = "summarize_chunk"
@@ -28,8 +29,10 @@ func (m *mockGateway) Complete(ctx context.Context, tier models.Tier, system, us
 		step = "merge_outline"
 	case strings.Contains(user, "Summarize the following source"):
 		step = "summarize_role"
-	case strings.Contains(user, "Run analysis:"),
-		strings.Contains(user, "Assemble an ordered chapter-by-chapter"):
+	case strings.Contains(user, "Merge the chapter notes below"),
+		strings.Contains(user, "Assemble an ordered chapter-by-chapter"),
+		strings.Contains(user, "from the chapter notes"),
+		strings.Contains(user, "from the chapter signal notes"):
 		step = "final"
 	}
 	m.calls = append(m.calls, step)
