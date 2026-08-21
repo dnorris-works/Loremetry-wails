@@ -84,6 +84,8 @@ export function GetAnalysisJobStatus(arg1:string):Promise<cloud.JobStatus>;
 
 export function GetAnalysisReport(arg1:number):Promise<store.AnalysisReport>;
 
+export function GetAnalysisResult(arg1:string,arg2:string):Promise<store.AnalysisResult>;
+
 export function GetChapter(arg1:number):Promise<store.Chapter>;
 
 export function GetCharacter(arg1:number):Promise<store.CharacterProfile>;
@@ -141,6 +143,8 @@ export function ListStoryDocs(arg1:number):Promise<Array<store.StoryDoc>>;
 export function ListTemplateFolders():Promise<store.TemplateFolderLists>;
 
 export function ListWritingTree():Promise<store.WritingTree>;
+
+export function ManuscriptChapterStickyContext(arg1:string,arg2:string):Promise<store.StickyChapterContext>;
 
 export function MatchAnalysisSources(arg1:string):Promise<store.AnalysisSources>;
 

@@ -3,12 +3,48 @@ import { api } from '@/api/client';
 import { useAppState } from '@/lib/app-state';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
+import { DelayedTooltip } from '@/components/ui/tooltip';
 import { Check, Pencil, Plus, Settings, Database, Moon, Sun, Trash2, Eye, EyeOff } from 'lucide-react';
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 
 const nest = 'ml-[2ch] border-l border-border pl-2';
+
+function needReady(sources, need) {
+    const role = (sources?.roles || []).find((r) => r.role === need);
+    return !!(role?.present && (role.files || []).length > 0);
+}
+
+function AnalysisUsesHover({ item, sources, hasProject, children }) {
+    const needs = item.needs || [];
+    const content = (
+        <div className="text-left">
+            <div className="mb-1 font-semibold uppercase tracking-wide opacity-80">Uses</div>
+            {needs.length === 0 ? (
+                <div className="opacity-80">No sources required</div>
+            ) : (
+                <ul className="space-y-0.5">
+                    {needs.map((n) => {
+                        let status = '';
+                        if (hasProject) {
+                            status = needReady(sources, n) ? ' — ready' : ' — missing';
+                        }
+                        return <li key={n}>{n}{status}</li>;
+                    })}
+                </ul>
+            )}
+            {!hasProject && needs.length > 0 && (
+                <div className="mt-1.5 opacity-70">Select a book or series first</div>
+            )}
+        </div>
+    );
+    return (
+        <DelayedTooltip delayMs={300} content={content} className="relative block w-full">
+            {children}
+        </DelayedTooltip>
+    );
+}
 
 export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, onSettings, onAdmin, }) {
     const { selection, setSelection, analysisId, analysisQueue, setAnalysis, reportId, setReport, refreshKey, bumpRefresh, openSeries, openStories, openFolders, toggleSeries, toggleStory, toggleFolder } = useAppState();
@@ -41,9 +77,23 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
     }
     const [tab, setTab] = useState('projects');
     const [hideAI, setHideAI] = useState(false);
+    const [analysisSources, setAnalysisSources] = useState(null);
     useEffect(() => {
         if (!hasProject && tab === 'analysis') setTab('projects');
     }, [hasProject, tab]);
+    useEffect(() => {
+        if (tab !== 'analysis' || !selection?.dir) {
+            setAnalysisSources(null);
+            return;
+        }
+        let cancelled = false;
+        void api.matchAnalysisSources(selection.dir).then((s) => {
+            if (!cancelled) setAnalysisSources(s);
+        }).catch(() => {
+            if (!cancelled) setAnalysisSources(null);
+        });
+        return () => { cancelled = true; };
+    }, [tab, selection?.dir, refreshKey]);
     const pens = tree.pens || [];
     return (<div className="flex h-full flex-col bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -88,11 +138,15 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                 const ai = !!(item.uses_ai ?? item.usesAI);
                 const selected = (analysisQueue || []).includes(item.id);
                 const primary = analysisId === item.id;
-                return (<button key={item.id} type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${primary ? 'bg-accent text-foreground' : selected ? 'bg-muted/60 text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
-                  {selected ? <Check className="h-3 w-3 shrink-0 text-primary"/> : <span className="inline-block h-3 w-3 shrink-0"/>}
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
-                </button>);
+                return (
+                  <AnalysisUsesHover key={item.id} item={item} sources={analysisSources} hasProject={hasProject}>
+                    <button type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${primary ? 'bg-accent text-foreground' : selected ? 'bg-muted/60 text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
+                      {selected ? <Check className="h-3 w-3 shrink-0 text-primary"/> : <span className="inline-block h-3 w-3 shrink-0"/>}
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      <span className="shrink-0 text-[9px] uppercase text-muted-foreground">{ai ? 'AI' : 'Local'}</span>
+                    </button>
+                  </AnalysisUsesHover>
+                );
               })}
             </div>);
           })}

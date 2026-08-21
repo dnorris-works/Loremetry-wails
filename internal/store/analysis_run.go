@@ -69,8 +69,7 @@ func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 		content = runPassiveVoice(blobs)
 		dataJSON = `{"kind":"passive_voice"}`
 	case "sticky_sentences":
-		content = runStickySentences(blobs)
-		dataJSON = `{"kind":"sticky_sentences"}`
+		content, dataJSON = runStickySentences(blobs)
 	case "repeated_phrases":
 		content = runRepeatedPhrases(blobs)
 		dataJSON = `{"kind":"repeated_phrases"}`

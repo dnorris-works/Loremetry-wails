@@ -5,6 +5,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Save, Trash2, X, FileDown } from 'lucide-react';
 import { MarkdownReport } from '@/editor/MarkdownReport';
+import { StickyChapterDialog } from '@/editor/StickyChapterDialog';
 import { VisualCompareView } from '@/editor/VisualCompareView';
 import { ReportSearchBar, useReportSearch } from '@/editor/ReportSearch';
 
@@ -14,6 +15,29 @@ function usesAI(detail) {
 
 function usesMerge(detail) {
     return !!(detail?.uses_merge ?? detail?.usesMerge);
+}
+
+function parseStickyData(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    try {
+        const data = JSON.parse(raw);
+        if (data?.kind !== 'sticky_sentences') return null;
+        return data;
+    }
+    catch {
+        return null;
+    }
+}
+
+async function openStickyChapter(projectPath, chapterIndex) {
+    const result = await api.getAnalysisResult(projectPath, 'sticky_sentences');
+    const data = parseStickyData(result.data_json || result.DataJSON || '');
+    const chapters = data?.chapters || [];
+    const ch = chapters[chapterIndex];
+    if (!ch?.rel) {
+        throw new Error('Chapter data missing — run Sticky Sentences again');
+    }
+    return api.manuscriptChapterStickyContext(projectPath, ch.rel);
 }
 
 function progressLabel(status, step, stepTotal) {
@@ -42,10 +66,18 @@ export function AnalysisPane() {
     const [view, setView] = useState('report');
     const [saved, setSaved] = useState(false);
     const [notice, setNotice] = useState('');
-    const [sources, setSources] = useState(null);
+    const [stickyOpen, setStickyOpen] = useState(false);
+    const [stickyContext, setStickyContext] = useState(null);
+    const [stickyError, setStickyError] = useState('');
     const searchApiRef = useRef(null);
     const search = useReportSearch(searchApiRef);
     const projectPath = selection?.dir || '';
+    const autoRanFor = useRef('');
+    const busyRef = useRef(false);
+    const detailRef = useRef(null);
+    const queueRef = useRef([]);
+    const queueLabelsRef = useRef([]);
+
     useEffect(() => {
         if (!analysisId) {
             setDetail(null);
@@ -58,6 +90,10 @@ export function AnalysisPane() {
         setView('report');
         setNotice('');
         setProgress('');
+        setStickyOpen(false);
+        setStickyContext(null);
+        setStickyError('');
+        autoRanFor.current = '';
         let cancelled = false;
         void api.getAnalysis(analysisId).then((d) => {
             if (!cancelled)
@@ -66,21 +102,11 @@ export function AnalysisPane() {
             if (!cancelled)
                 setDetail(null);
         });
-        if (projectPath) {
-            void api.matchAnalysisSources(projectPath).then((s) => {
-                if (!cancelled)
-                    setSources(s);
-            }).catch(() => {
-                if (!cancelled)
-                    setSources(null);
-            });
-        } else {
-            setSources(null);
-        }
         return () => {
             cancelled = true;
         };
-    }, [analysisId, projectPath]);
+    }, [analysisId]);
+
     useEffect(() => {
         const ids = analysisQueue?.length ? analysisQueue : (analysisId ? [analysisId] : []);
         if (!ids.length) {
@@ -96,22 +122,43 @@ export function AnalysisPane() {
             cancelled = true;
         };
     }, [analysisQueue, analysisId]);
-    if (!detail) {
-        return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+
+    const queue = (analysisQueue?.length ? analysisQueue : (detail?.id ? [detail.id] : []));
+    detailRef.current = detail;
+    queueRef.current = queue;
+    queueLabelsRef.current = queueLabels;
+    busyRef.current = busy;
+
+    async function handleStickyChapterClick(index) {
+        if (!projectPath) {
+            setStickyError('Select a book or series folder first');
+            setStickyContext(null);
+            setStickyOpen(true);
+            return;
+        }
+        setStickyError('');
+        setStickyOpen(true);
+        setStickyContext(null);
+        try {
+            const ctx = await openStickyChapter(projectPath, index);
+            setStickyContext(ctx);
+        }
+        catch (err) {
+            setStickyError(err instanceof Error ? err.message : 'Could not load chapter');
+        }
     }
-    const ai = usesAI(detail);
-    const mergeFlag = usesMerge(detail);
-    const queue = (analysisQueue?.length ? analysisQueue : [detail.id]);
-    function applyReport(report) {
+
+    function applyReport(report, forDetail) {
         const orig = report.original || report.Original || '';
         const prop = report.proposed || report.Proposed || '';
         const text = report.body || '';
         setBody(text);
         setMergeOriginal(orig);
         setMergeProposed(prop);
-        setView(usesMerge(detail) || (orig && prop) ? 'merge' : 'report');
+        setView(usesMerge(forDetail) || (orig && prop) ? 'merge' : 'report');
         setSaved(false);
     }
+
     async function runOne(id) {
         const info = await api.getAnalysis(id);
         if (usesAI(info)) {
@@ -134,22 +181,27 @@ export function AnalysisPane() {
         }
         return api.runAnalysis(id, projectPath);
     }
+
     async function run() {
+        const current = detailRef.current;
+        if (!current || busyRef.current) return;
+        const runQueue = queueRef.current.length ? queueRef.current : [current.id];
+        const labels = queueLabelsRef.current;
         setBusy(true);
         setNotice('');
         setProgress('');
         try {
             let primary = null;
-            for (let i = 0; i < queue.length; i++) {
-                const id = queue[i];
-                const label = queueLabels[i] || id;
-                setProgress(queue.length > 1 ? `${label} (${i + 1}/${queue.length})…` : 'Running…');
+            for (let i = 0; i < runQueue.length; i++) {
+                const id = runQueue[i];
+                const label = labels[i] || id;
+                setProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…');
                 const report = await runOne(id);
-                if (id === detail.id)
+                if (id === current.id)
                     primary = report;
             }
             if (primary)
-                applyReport(primary);
+                applyReport(primary, current);
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : 'Could not run analysis';
@@ -168,6 +220,24 @@ export function AnalysisPane() {
             setProgress('');
         }
     }
+
+    useEffect(() => {
+        if (!detail || detail.id !== analysisId) return;
+        if (!projectPath) {
+            setNotice('Select a book or series folder in Projects first.');
+            return;
+        }
+        if (autoRanFor.current === analysisId) return;
+        autoRanFor.current = analysisId;
+        void run();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per analysis open
+    }, [detail, analysisId, projectPath]);
+
+    if (!detail) {
+        return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+    }
+    const ai = usesAI(detail);
+    const mergeFlag = usesMerge(detail);
     async function saveReport() {
         // Compare-only analyses persist sides only — no report body.
         const saveBody = mergeFlag ? '' : body;
@@ -189,7 +259,6 @@ export function AnalysisPane() {
     const hasMerge = !!(mergeOriginal && mergeProposed);
     const hasOutput = mergeFlag ? hasMerge : !!body;
     const isVellum = detail.id === 'vellum_prep';
-    const busyLabel = progress || (busy ? 'Running…' : (queue.length > 1 ? `Run ${queue.length}` : 'Run'));
     return (<div className="flex h-full flex-col">
       <div className="border-b border-border">
         <div className="flex items-center gap-2 px-4 py-2">
@@ -230,9 +299,6 @@ export function AnalysisPane() {
           {hasOutput && saved && (
             <span className="shrink-0 text-xs text-green-600 dark:text-green-400">Saved</span>
           )}
-          <Button size="sm" className="shrink-0" onClick={() => void run()} disabled={busy}>
-            {busyLabel}
-          </Button>
           <Button size="icon" variant="ghost" className="shrink-0" onClick={() => { setBody(''); setMergeOriginal(''); setMergeProposed(''); setAnalysis(''); }} title="Close">
             <X className="h-4 w-4"/>
           </Button>
@@ -254,43 +320,32 @@ export function AnalysisPane() {
                 setSearchActiveIndex={search.setActiveIndex}
                 onSearchMatchCount={search.onMatchCount}
                 searchApiRef={searchApiRef}
+                onStickyChapterClick={detail.id === 'sticky_sentences' ? handleStickyChapterClick : undefined}
               />
             )}
           </>
         ) : (<div className="overflow-auto p-6">
-          <p className="max-w-2xl text-sm leading-relaxed">{detail.description || 'No description.'}</p>
-          {mergeFlag && <p className="mt-2 max-w-2xl text-xs text-muted-foreground">Run to open a Compare view of the manuscript with findings marked in place. No separate report is created.</p>}
-          {ai && <p className="mt-2 max-w-2xl text-xs text-muted-foreground">This analysis uses AI and needs a plan or credits.</p>}
-          {queue.length > 1 && (
-            <div className="mt-4 max-w-2xl">
-              <div className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">Run queue</div>
-              <ol className="list-decimal space-y-0.5 pl-4 text-sm text-muted-foreground">
-                {queueLabels.map((label, i) => (
-                  <li key={queue[i] || label} className={queue[i] === detail.id ? 'text-foreground' : ''}>{label}</li>
-                ))}
-              </ol>
+          {busy || progress ? (
+            <p className="text-sm text-muted-foreground">{progress || 'Running…'}</p>
+          ) : notice ? (
+            <div className="max-w-2xl space-y-2">
+              <p className="text-sm text-destructive">{notice}</p>
+              {ai && notice.includes('AI') && (<div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => void api.connectCloudAccount('').then(() => setNotice('Connected. Try Run again.')).catch((e) => setNotice(e instanceof Error ? e.message : 'Connect failed'))}>Connect for AI</Button>
+                <Button size="sm" variant="outline" onClick={() => void api.openBillingCheckout().catch((e) => setNotice(e instanceof Error ? e.message : 'Checkout failed'))}>Choose a plan</Button>
+              </div>)}
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Starting…</p>
           )}
-          {notice && (<div className="mt-3 max-w-2xl space-y-2">
-            <p className="text-sm text-destructive">{notice}</p>
-            {ai && notice.includes('AI') && (<div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => void api.connectCloudAccount('').then(() => setNotice('Connected. Try Run again.')).catch((e) => setNotice(e instanceof Error ? e.message : 'Connect failed'))}>Connect for AI</Button>
-              <Button size="sm" variant="outline" onClick={() => void api.openBillingCheckout().catch((e) => setNotice(e instanceof Error ? e.message : 'Checkout failed'))}>Choose a plan</Button>
-            </div>)}
-          </div>)}
-          {(detail.needs || []).length > 0 && (<div className="mt-6">
-            <div className="mb-2 text-[10px] font-semibold uppercase text-muted-foreground">Uses</div>
-            <ul className="space-y-1 text-sm">
-              {(detail.needs || []).map((n) => {
-                  const role = (sources?.roles || []).find((r) => r.role === n);
-                  const ok = role?.present && (role.files || []).length > 0;
-                  return (<li key={n} className="text-muted-foreground">{n}{projectPath ? (ok ? ' — ready' : ' — missing') : ''}</li>);
-              })}
-            </ul>
-            {!projectPath && <p className="mt-2 text-xs text-muted-foreground">Select a book or series folder in Projects first.</p>}
-          </div>)}
         </div>)}
       </div>
+      <StickyChapterDialog
+        open={stickyOpen}
+        onOpenChange={setStickyOpen}
+        context={stickyContext}
+        error={stickyError}
+      />
     </div>);
 }
 
@@ -299,12 +354,18 @@ export function ReportPane() {
     const confirm = useConfirm();
     const [report, setData] = useState(null);
     const [view, setView] = useState('report');
+    const [stickyOpen, setStickyOpen] = useState(false);
+    const [stickyContext, setStickyContext] = useState(null);
+    const [stickyError, setStickyError] = useState('');
     useEffect(() => {
         if (!reportId) {
             setData(null);
             return;
         }
         setView('report');
+        setStickyOpen(false);
+        setStickyContext(null);
+        setStickyError('');
         let cancelled = false;
         void api.getAnalysisReport(reportId).then((r) => {
             if (cancelled)
@@ -331,6 +392,25 @@ export function ReportPane() {
         setReport(0);
         bumpRefresh();
     }
+    async function handleStickyChapterClick(index) {
+        const projectPath = report?.project_path || report?.projectPath || '';
+        if (!projectPath) {
+            setStickyError('Project path missing on this report');
+            setStickyContext(null);
+            setStickyOpen(true);
+            return;
+        }
+        setStickyError('');
+        setStickyOpen(true);
+        setStickyContext(null);
+        try {
+            const ctx = await openStickyChapter(projectPath, index);
+            setStickyContext(ctx);
+        }
+        catch (err) {
+            setStickyError(err instanceof Error ? err.message : 'Could not load chapter');
+        }
+    }
     if (!report) {
         return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
     }
@@ -339,7 +419,9 @@ export function ReportPane() {
     const mergeProposed = report.proposed || report.Proposed || '';
     const hasMerge = !!(mergeOriginal && mergeProposed);
     const compareOnly = hasMerge && !String(report.body || '').trim();
-    const isVellum = (report.analysis_id || report.analysisId) === 'vellum_prep';
+    const analysisId = report.analysis_id || report.analysisId;
+    const isVellum = analysisId === 'vellum_prep';
+    const isSticky = analysisId === 'sticky_sentences';
     async function exportDocx() {
         try {
             await api.exportMarkdownDocx(report.body || '', 'vellum-prep.docx');
@@ -417,8 +499,15 @@ export function ReportPane() {
             setSearchActiveIndex={search.setActiveIndex}
             onSearchMatchCount={search.onMatchCount}
             searchApiRef={searchApiRef}
+            onStickyChapterClick={isSticky ? handleStickyChapterClick : undefined}
           />
         )}
       </div>
+      <StickyChapterDialog
+        open={stickyOpen}
+        onOpenChange={setStickyOpen}
+        context={stickyContext}
+        error={stickyError}
+      />
     </div>);
 }

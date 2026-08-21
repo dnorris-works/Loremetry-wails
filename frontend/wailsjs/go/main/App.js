@@ -162,6 +162,10 @@ export function GetAnalysisReport(arg1) {
   return window['go']['main']['App']['GetAnalysisReport'](arg1);
 }
 
+export function GetAnalysisResult(arg1, arg2) {
+  return window['go']['main']['App']['GetAnalysisResult'](arg1, arg2);
+}
+
 export function GetChapter(arg1) {
   return window['go']['main']['App']['GetChapter'](arg1);
 }
@@ -276,6 +280,10 @@ export function ListTemplateFolders() {
 
 export function ListWritingTree() {
   return window['go']['main']['App']['ListWritingTree']();
+}
+
+export function ManuscriptChapterStickyContext(arg1, arg2) {
+  return window['go']['main']['App']['ManuscriptChapterStickyContext'](arg1, arg2);
 }
 
 export function MatchAnalysisSources(arg1) {

@@ -1,14 +1,21 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
+
+// fictionCharsPerLine is the wrap width used for sticky-sentence line numbers
+// (~5.5×8 fiction text block).
+const fictionCharsPerLine = 60
 
 // sentenceEndRe matches sentence-ending punctuation followed by whitespace or end-of-string.
 var sentenceEndRe = regexp.MustCompile(`([.!?])(\s|$)`)
@@ -1039,25 +1046,262 @@ func runPassiveVoice(blobs []RoleText) string {
 	return b.String()
 }
 
+type fictionLine struct {
+	Text  string
+	Start int // byte offset in original (inclusive)
+	End   int // byte offset exclusive
+}
+
+// wrapFictionLines word-wraps text to width runes per line, tracking byte offsets.
+func wrapFictionLines(text string, width int) []fictionLine {
+	if width < 1 {
+		width = fictionCharsPerLine
+	}
+	var lines []fictionLine
+	flush := func(start, end int) {
+		if start >= end || start < 0 || end > len(text) {
+			return
+		}
+		lines = append(lines, fictionLine{Text: text[start:end], Start: start, End: end})
+	}
+
+	i := 0
+	for i < len(text) {
+		if text[i] == '\n' {
+			// Preserve blank lines as empty numbered lines for readability.
+			lines = append(lines, fictionLine{Text: "", Start: i, End: i})
+			i++
+			continue
+		}
+		lineStart := i
+		lineWidth := 0
+		lastBreak := -1 // byte index of whitespace where we can wrap
+		for i < len(text) && text[i] != '\n' {
+			r, size := utf8.DecodeRuneInString(text[i:])
+			if r == utf8.RuneError && size == 1 {
+				size = 1
+			}
+			if lineWidth >= width && lineWidth > 0 {
+				if lastBreak > lineStart {
+					flush(lineStart, lastBreak)
+					i = lastBreak
+					for i < len(text) && (text[i] == ' ' || text[i] == '\t') {
+						i++
+					}
+					lineStart = i
+					lineWidth = 0
+					lastBreak = -1
+					continue
+				}
+				// Hard-break overlong tokens; always advance at least one rune.
+				if i == lineStart {
+					i += size
+				}
+				flush(lineStart, i)
+				lineStart = i
+				lineWidth = 0
+				lastBreak = -1
+				continue
+			}
+			if r == ' ' || r == '\t' {
+				lastBreak = i
+			}
+			i += size
+			lineWidth++
+		}
+		flush(lineStart, i)
+		if i < len(text) && text[i] == '\n' {
+			i++
+		}
+	}
+	return lines
+}
+
+func lineRangeForOffsets(lines []fictionLine, start, end int) (lineStart, lineEnd int) {
+	for i, ln := range lines {
+		if ln.End <= start || ln.Start >= end {
+			continue
+		}
+		n := i + 1
+		if lineStart == 0 {
+			lineStart = n
+		}
+		lineEnd = n
+	}
+	if lineStart == 0 {
+		for i, ln := range lines {
+			if start >= ln.Start && (start < ln.End || ln.Start == ln.End) {
+				return i + 1, i + 1
+			}
+		}
+		if len(lines) == 0 {
+			return 1, 1
+		}
+		return 1, 1
+	}
+	return lineStart, lineEnd
+}
+
+// StickyLineSpan is a 1-based inclusive line range covering a sticky sentence.
+type StickyLineSpan struct {
+	LineStart int `json:"line_start"`
+	LineEnd   int `json:"line_end"`
+}
+
+// StickyChapterData is one chapter row for sticky_sentences data_json.
+type StickyChapterData struct {
+	Chapter   string           `json:"chapter"`
+	Rel       string           `json:"rel"`
+	Sentences int              `json:"sentences"`
+	Sticky    int              `json:"sticky"`
+	StickyPct float64          `json:"sticky_pct"`
+	Spans     []StickyLineSpan `json:"spans"`
+}
+
+// StickySentencesData is the structured payload for sticky_sentences.
+type StickySentencesData struct {
+	Kind      string              `json:"kind"`
+	LineWidth int                 `json:"line_width"`
+	Chapters  []StickyChapterData `json:"chapters"`
+}
+
+// StickyLineView is one numbered line in the chapter sticky dialog.
+type StickyLineView struct {
+	Line      int    `json:"line"`
+	Text      string `json:"text"`
+	Highlight bool   `json:"highlight"`
+}
+
+// StickyChapterContext is the full chapter view for the sticky dialog.
+type StickyChapterContext struct {
+	Chapter     string          `json:"chapter"`
+	Rel         string          `json:"rel"`
+	LineWidth   int             `json:"line_width"`
+	StickyCount int             `json:"sticky_count"`
+	Lines       []StickyLineView `json:"lines"`
+}
+
+func sentenceGlueRatio(s string) (ratio float64, ok bool) {
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return 0, false
+	}
+	glueCount := 0
+	for _, w := range words {
+		if isGlueWord(normalizeWord(w)) {
+			glueCount++
+		}
+	}
+	return float64(glueCount) / float64(len(words)), true
+}
+
+func stickySpansForChapter(text string, width int) (spans []StickyLineSpan, stickyCount, sentCount int, top []struct {
+	text  string
+	ratio float64
+}) {
+	lines := wrapFictionLines(text, width)
+	sents := splitSentences(text)
+	sentCount = len(sents)
+	pos := 0
+	for _, s := range sents {
+		ratio, ok := sentenceGlueRatio(s)
+		if !ok {
+			continue
+		}
+		idx := strings.Index(text[pos:], s)
+		start, end := pos, pos
+		if idx >= 0 {
+			start = pos + idx
+			end = start + len(s)
+			pos = end
+		}
+		top = append(top, struct {
+			text  string
+			ratio float64
+		}{text: s, ratio: ratio})
+		if ratio > 0.45 {
+			stickyCount++
+			ls, le := lineRangeForOffsets(lines, start, end)
+			spans = append(spans, StickyLineSpan{LineStart: ls, LineEnd: le})
+		}
+	}
+	return spans, stickyCount, sentCount, top
+}
+
+func lineHighlighted(spans []StickyLineSpan, lineNum int) bool {
+	for _, sp := range spans {
+		if lineNum >= sp.LineStart && lineNum <= sp.LineEnd {
+			return true
+		}
+	}
+	return false
+}
+
+// BuildStickyChapterContext reloads a manuscript chapter and returns fiction-wrapped
+// lines with every sticky sentence highlighted.
+func BuildStickyChapterContext(projectPath, chapterRel string) (StickyChapterContext, error) {
+	root := ResolveProjectRoot(projectPath)
+	if root == "" {
+		return StickyChapterContext{}, fmt.Errorf("select a book or series first")
+	}
+	chapterRel = strings.TrimSpace(chapterRel)
+	if chapterRel == "" {
+		return StickyChapterContext{}, fmt.Errorf("missing chapter")
+	}
+
+	var text, name, rel string
+	path := filepath.Join(root, filepath.FromSlash(chapterRel))
+	if b, err := os.ReadFile(path); err == nil {
+		text = string(b)
+		name = filepath.Base(path)
+		rel = chapterRel
+	} else {
+		blobs := CollectNeededText(root, []string{"manuscript"})
+		for _, blob := range blobs {
+			if blob.Rel == chapterRel || filepath.Base(blob.Rel) == filepath.Base(chapterRel) {
+				text = blob.Text
+				name = blob.Name
+				rel = blob.Rel
+				break
+			}
+		}
+	}
+	if strings.TrimSpace(text) == "" {
+		return StickyChapterContext{}, fmt.Errorf("chapter not found")
+	}
+
+	text = strings.TrimSpace(text)
+	spans, stickyCount, _, _ := stickySpansForChapter(text, fictionCharsPerLine)
+	lines := wrapFictionLines(text, fictionCharsPerLine)
+	out := make([]StickyLineView, 0, len(lines))
+	for i, ln := range lines {
+		n := i + 1
+		out = append(out, StickyLineView{
+			Line:      n,
+			Text:      ln.Text,
+			Highlight: lineHighlighted(spans, n),
+		})
+	}
+	return StickyChapterContext{
+		Chapter:     strings.TrimSuffix(name, filepath.Ext(name)),
+		Rel:         rel,
+		LineWidth:   fictionCharsPerLine,
+		StickyCount: stickyCount,
+		Lines:       out,
+	}, nil
+}
+
 // runStickySentences reports sentences overloaded with function words (glue words).
-// A sentence is "sticky" when >45% of its words are glue words. The report
-// includes per-chapter sticky counts, a top-10 stickiest sentences table, and
-// manuscript-wide totals.
-func runStickySentences(blobs []RoleText) string {
+// A sentence is "sticky" when >45% of its words are glue words. Returns markdown
+// and a JSON payload with per-chapter sticky line spans for the View dialog.
+func runStickySentences(blobs []RoleText) (markdown string, dataJSON string) {
 	type stickySentence struct {
 		text    string
 		chapter string
 		ratio   float64
 	}
 
-	type chapterStats struct {
-		name      string
-		sentences int
-		sticky    int
-		stickyPct float64
-	}
-
-	var chapters []chapterStats
+	var chapterData []StickyChapterData
 	var topSentences []stickySentence
 	var totalSentences, totalSticky int
 
@@ -1071,66 +1315,57 @@ func runStickySentences(blobs []RoleText) string {
 		}
 
 		chapterName := strings.TrimSuffix(blob.Name, filepath.Ext(blob.Name))
-		sents := splitSentences(text)
-		if len(sents) == 0 {
+		spans, stickyCount, sentCount, top := stickySpansForChapter(text, fictionCharsPerLine)
+		if sentCount == 0 {
 			continue
 		}
 
-		stickyCount := 0
-		for _, s := range sents {
-			words := strings.Fields(s)
-			if len(words) == 0 {
-				continue
-			}
+		pct := 0.0
+		if sentCount > 0 {
+			pct = float64(stickyCount) / float64(sentCount) * 100
+		}
 
-			glueCount := 0
-			for _, w := range words {
-				if isGlueWord(normalizeWord(w)) {
-					glueCount++
-				}
-			}
+		chapterData = append(chapterData, StickyChapterData{
+			Chapter:   chapterName,
+			Rel:       blob.Rel,
+			Sentences: sentCount,
+			Sticky:    stickyCount,
+			StickyPct: pct,
+			Spans:     spans,
+		})
 
-			ratio := float64(glueCount) / float64(len(words))
-
-			if ratio > 0.45 {
-				stickyCount++
-			}
-
-			// Track for top-10 ranking.
+		for _, t := range top {
 			topSentences = append(topSentences, stickySentence{
-				text:    s,
+				text:    t.text,
 				chapter: chapterName,
-				ratio:   ratio,
+				ratio:   t.ratio,
 			})
 		}
 
-		pct := 0.0
-		if len(sents) > 0 {
-			pct = float64(stickyCount) / float64(len(sents)) * 100
-		}
-
-		chapters = append(chapters, chapterStats{
-			name:      chapterName,
-			sentences: len(sents),
-			sticky:    stickyCount,
-			stickyPct: pct,
-		})
-
-		totalSentences += len(sents)
+		totalSentences += sentCount
 		totalSticky += stickyCount
 	}
 
-	if len(chapters) == 0 {
-		return "No manuscript chapters with content found."
+	payload := StickySentencesData{
+		Kind:      "sticky_sentences",
+		LineWidth: fictionCharsPerLine,
+		Chapters:  chapterData,
+	}
+	if raw, err := json.Marshal(payload); err == nil {
+		dataJSON = string(raw)
+	} else {
+		dataJSON = `{"kind":"sticky_sentences","line_width":60,"chapters":[]}`
 	}
 
-	// Manuscript-wide sticky percentage.
+	if len(chapterData) == 0 {
+		return "No manuscript chapters with content found.", dataJSON
+	}
+
 	overallPct := 0.0
 	if totalSentences > 0 {
 		overallPct = float64(totalSticky) / float64(totalSentences) * 100
 	}
 
-	// Sort all sentences by ratio descending, keep top 10.
 	sort.Slice(topSentences, func(i, j int) bool {
 		return topSentences[i].ratio > topSentences[j].ratio
 	})
@@ -1138,46 +1373,39 @@ func runStickySentences(blobs []RoleText) string {
 		topSentences = topSentences[:10]
 	}
 
-	// Build output.
 	var b strings.Builder
-
 	b.WriteString("## Summary\n\n")
 	fmt.Fprintf(&b, "- **Total sentences:** %d\n", totalSentences)
 	fmt.Fprintf(&b, "- **Sticky sentences:** %d\n", totalSticky)
 	fmt.Fprintf(&b, "- **Sticky percentage:** %.1f%%\n", overallPct)
-	fmt.Fprintf(&b, "- **Chapters analyzed:** %d\n", len(chapters))
+	fmt.Fprintf(&b, "- **Chapters analyzed:** %d\n", len(chapterData))
 	b.WriteString("- **Sticky threshold:** >45% glue words\n")
+	fmt.Fprintf(&b, "- **View line length:** %d characters (~5.5×8 fiction)\n", fictionCharsPerLine)
 	b.WriteString("\n")
 
-	// Per-chapter table.
 	b.WriteString("## Per-Chapter Breakdown\n\n")
-	b.WriteString("| Chapter | Sentences | Sticky | Sticky% |\n")
-	b.WriteString("|---|---|---|---|\n")
-
-	for _, ch := range chapters {
-		fmt.Fprintf(&b, "| %s | %d | %d | %.1f%% |\n",
-			ch.name, ch.sentences, ch.sticky, ch.stickyPct)
+	b.WriteString("| Chapter | Sentences | Sticky | Sticky% | View |\n")
+	b.WriteString("|---|---|---|---|---|\n")
+	for i, ch := range chapterData {
+		fmt.Fprintf(&b, "| %s | %d | %d | %.1f%% | [View](#sticky-chapter-%d) |\n",
+			ch.Chapter, ch.Sentences, ch.Sticky, ch.StickyPct, i)
 	}
-
 	b.WriteString("\n")
 
-	// Top 10 stickiest sentences.
 	b.WriteString("## Top 10 Stickiest Sentences\n\n")
 	b.WriteString("| Sentence | Glue% | Chapter |\n")
 	b.WriteString("|---|---|---|\n")
-
 	for _, ts := range topSentences {
 		display := ts.text
 		if len(display) > 80 {
 			display = display[:80] + "..."
 		}
-		// Escape pipe characters in the sentence for markdown table safety.
 		display = strings.ReplaceAll(display, "|", "\\|")
 		fmt.Fprintf(&b, "| %s | %.1f%% | %s |\n",
 			display, ts.ratio*100, ts.chapter)
 	}
 
-	return b.String()
+	return b.String(), dataJSON
 }
 
 // runRepeatedPhrases finds 2-gram, 3-gram, and 4-gram phrases that appear 5+

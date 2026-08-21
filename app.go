@@ -484,6 +484,22 @@ func (a *App) GetAnalysisReport(id int64) (store.AnalysisReport, error) {
 	return s.GetAnalysisReport(id)
 }
 
+func (a *App) GetAnalysisResult(projectPath string, analysisID string) (store.AnalysisResult, error) {
+	s, err := a.ready()
+	if err != nil {
+		return store.AnalysisResult{}, err
+	}
+	root := store.ResolveProjectRoot(projectPath)
+	if root == "" {
+		return store.AnalysisResult{}, fmt.Errorf("select a book or series first")
+	}
+	return s.GetAnalysisResult(root, analysisID)
+}
+
+func (a *App) ManuscriptChapterStickyContext(projectPath string, chapterRel string) (store.StickyChapterContext, error) {
+	return store.BuildStickyChapterContext(projectPath, chapterRel)
+}
+
 func (a *App) DeleteAnalysisReport(id int64) error {
 	s, err := a.ready()
 	if err != nil {
