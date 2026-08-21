@@ -41,8 +41,17 @@ func TestUpsertAnalysisResult(t *testing.T) {
 func TestAnalysisRunQueue(t *testing.T) {
 	ensureCatalogDB(t)
 	q := AnalysisRunQueue("genre_analysis")
-	if len(q) < 2 || q[len(q)-1] != "genre_analysis" || q[0] != "chapter_summaries" {
+	if len(q) != 1 || q[0] != "genre_analysis" {
 		t.Fatalf("%v", q)
+	}
+	rank := AnalysisRunQueue("genre_ranking")
+	if len(rank) < 2 || rank[len(rank)-1] != "genre_ranking" || rank[0] != "genre_analysis" {
+		t.Fatalf("%v", rank)
+	}
+	for _, id := range rank {
+		if id == "chapter_summaries" {
+			t.Fatalf("queue should not include chapter_summaries: %v", rank)
+		}
 	}
 	z := AnalysisRunQueue("zeigarnik_analysis")
 	if len(z) != 1 || z[0] != "zeigarnik_analysis" {

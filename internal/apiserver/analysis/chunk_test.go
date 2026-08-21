@@ -43,13 +43,16 @@ func TestProfileForChunked(t *testing.T) {
 	t.Cleanup(func() { _ = conn.Close() })
 	store.SetCatalogDB(conn)
 
-	if ProfileFor("analysis") != ProfileChunked {
-		t.Fatal("expected chunked profile for analysis")
+	if ProfileFor("analysis") != ProfileByChapter {
+		t.Fatal("expected by_chapter profile for analysis")
 	}
-	if ProfileFor("genre_analysis") != ProfileSingle {
-		t.Fatal("expected single profile for genre_analysis")
+	if ProfileFor("genre_analysis") != ProfileByChapter {
+		t.Fatal("expected by_chapter profile for genre_analysis")
 	}
 	if ProfileFor("ai_beta_reader") != ProfileByChapter {
 		t.Fatal("expected by_chapter profile for ai_beta_reader")
+	}
+	if ProfileFor("hook_strength") != ProfileSingle {
+		t.Fatal("expected single profile for hook_strength")
 	}
 }

@@ -19,7 +19,8 @@ type mockGateway struct {
 func (m *mockGateway) Complete(ctx context.Context, tier models.Tier, system, user string) (string, models.Usage, error) {
 	step := "other"
 	switch {
-	case strings.Contains(user, "Analyze this single chapter"):
+	case strings.Contains(user, "Analyze this single chapter"),
+		strings.Contains(user, "Write a real plot summary of this single chapter"):
 		step = "analyze_chapter"
 	case strings.Contains(user, "Summarize this manuscript section"):
 		step = "summarize_chunk"
@@ -27,7 +28,8 @@ func (m *mockGateway) Complete(ctx context.Context, tier models.Tier, system, us
 		step = "merge_outline"
 	case strings.Contains(user, "Summarize the following source"):
 		step = "summarize_role"
-	case strings.Contains(user, "Run analysis:"):
+	case strings.Contains(user, "Run analysis:"),
+		strings.Contains(user, "Assemble an ordered chapter-by-chapter"):
 		step = "final"
 	}
 	m.calls = append(m.calls, step)
@@ -75,58 +77,19 @@ func TestRunByChapterCallsPerChapterThenFinal(t *testing.T) {
 }
 
 func TestRunChunkedJoinsMultipleManuscriptSources(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "loremetry-app.db")
-	conn, err := appdb.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = conn.Close() })
-	store.SetCatalogDB(conn)
-
-	if ProfileFor("analysis") != ProfileChunked {
-		t.Fatal("expected chunked for analysis")
-	}
-
-	gw := &mockGateway{}
+	gw := &recordingGateway{}
 	runner := Runner{Gateway: gw}
-	// Two short chapters; joined text stays under split threshold → one summarize_chunk.
 	sources := []Source{
 		{Role: "manuscript", Name: "01-A.md", Text: "UNIQUE_CHAPTER_ONE_MARKER"},
 		{Role: "manuscript", Name: "02-B.md", Text: "UNIQUE_CHAPTER_TWO_MARKER"},
 		{Role: "plot", Name: "plot.md", Text: "Plot notes."},
 	}
-	_, err = runner.Run(context.Background(), "analysis", sources)
+	_, err := runner.runChunked(context.Background(), "analysis", sources)
 	if err != nil {
 		t.Fatal(err)
-	}
-	var sawChunk bool
-	for _, c := range gw.calls {
-		if c == "summarize_chunk" {
-			sawChunk = true
-		}
-	}
-	if !sawChunk {
-		t.Fatalf("expected summarize_chunk, calls=%v", gw.calls)
-	}
-	// Ensure join did not drop the first chapter: inspect the first summarize_chunk user via a recording gateway.
-	rec := &recordingGateway{}
-	runner2 := Runner{Gateway: rec}
-	_, err = runner2.Run(context.Background(), "analysis", sources)
-	if err != nil {
-		t.Fatal(err)
-	}
-	joined := false
-	for _, u := range rec.users {
-		if strings.Contains(u, "UNIQUE_CHAPTER_ONE_MARKER") && strings.Contains(u, "UNIQUE_CHAPTER_TWO_MARKER") {
-			joined = true
-			break
-		}
-		if strings.Contains(u, "UNIQUE_CHAPTER_ONE_MARKER") || strings.Contains(u, "UNIQUE_CHAPTER_TWO_MARKER") {
-			// section summaries may only include one marker each; both must appear across calls
-		}
 	}
 	var one, two bool
-	for _, u := range rec.users {
+	for _, u := range gw.users {
 		if strings.Contains(u, "UNIQUE_CHAPTER_ONE_MARKER") {
 			one = true
 		}
@@ -135,7 +98,7 @@ func TestRunChunkedJoinsMultipleManuscriptSources(t *testing.T) {
 		}
 	}
 	if !one || !two {
-		t.Fatalf("chunked must include both manuscript chapters; one=%v two=%v joined=%v users=%d", one, two, joined, len(rec.users))
+		t.Fatalf("chunked must include both manuscript chapters; one=%v two=%v users=%d", one, two, len(gw.users))
 	}
 }
 
@@ -162,6 +125,8 @@ func TestProfileForByChapterCatalog(t *testing.T) {
 		"cliffhanger_score", "pacing_curve", "ai_beta_reader", "dramatic_irony", "content_maturity_advisory",
 		"chekhovs_gun", "macguffin_clarity", "red_herring_vs_abandoned", "foreshadowing_twist_fairness",
 		"timeline_flashback", "stakes_escalation", "story_beat_placement",
+		"analysis", "genre_analysis", "want_vs_need", "blurb_builder", "continuity_check",
+		"thematic_throughline", "series_pacing_comparator",
 	}
 	for _, id := range want {
 		if ProfileFor(id) != ProfileByChapter {
@@ -171,8 +136,11 @@ func TestProfileForByChapterCatalog(t *testing.T) {
 	if ProfileFor("hook_strength") != ProfileSingle {
 		t.Fatal("hook_strength should stay single")
 	}
-	if ProfileFor("analysis") != ProfileChunked {
-		t.Fatal("analysis should stay chunked")
+	if ProfileFor("cross_book_setup_payoff") != ProfileTwoStep {
+		t.Fatal("cross_book_setup_payoff should stay two_step")
+	}
+	if ProfileFor("wide_metadata_paste") != ProfileSingle {
+		t.Fatal("wide_metadata_paste should stay single")
 	}
 }
 

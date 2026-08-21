@@ -30,9 +30,17 @@ func StepPrompt(step, analysisID string, sources []Source, prior []string) strin
 	case "merge_outline":
 		b.WriteString("Merge these section summaries into one structured outline (acts, themes, issues, continuity notes). Analysis: ")
 	case "analyze_chapter":
-		b.WriteString("Analyze this single chapter for the named craft analysis. List concrete findings with short quotes or location cues. Do not write the full book report yet—chapter notes only. Analysis: ")
+		if analysisID == "chapter_summaries" {
+			b.WriteString("Write a real plot summary of this single chapter for the author. Cover who is present, what happens (in order), stakes or conflict, and any open loops or unanswered questions. Use concrete names and events—no vague marketing language. Do not write the full-book document yet. Analysis: ")
+		} else {
+			b.WriteString("Analyze this single chapter for the named craft analysis. List concrete findings with short quotes or location cues. Do not write the full book report yet—chapter notes only. Analysis: ")
+		}
 	default:
-		b.WriteString("Run analysis: ")
+		if analysisID == "chapter_summaries" {
+			b.WriteString("Assemble an ordered chapter-by-chapter plot summary document from the chapter notes below. One section per chapter with a clear heading. Keep each summary concrete and faithful to the notes. Analysis: ")
+		} else {
+			b.WriteString("Run analysis: ")
+		}
 	}
 	b.WriteString(analysisID)
 	b.WriteString("\n\n")
