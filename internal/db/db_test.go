@@ -28,7 +28,7 @@ func TestOpenCreatesAppTables(t *testing.T) {
 
 	want := []string{
 		"users", "series", "stories", "story_acts", "story_documents", "character_profiles",
-		"series_bible_documents", "document_types", "user_settings", "app_settings", "disk_hashes",
+		"series_bible_documents", "document_types", "analysis_catalog", "user_settings", "app_settings", "disk_hashes",
 		"analysis_reports", "analysis_results",
 	}
 	for _, table := range want {
