@@ -9,8 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"loremetry/internal/apiserver/analysis"
 	"loremetry/internal/cloud"
 	appdb "loremetry/internal/db"
+	"loremetry/internal/localai"
 	"loremetry/internal/store"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -32,14 +34,23 @@ type App struct {
 	watchStop chan struct{}
 	syncing   bool
 	busy      bool
+	localAI   *localai.Manager
+	localJobs *localai.JobStore
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{
+		localAI:   localai.NewManager(),
+		localJobs: localai.NewJobStore(),
+	}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// Local AI follows the app lifetime: start with the window, stop on shutdown.
+	if a.localAI != nil {
+		a.localAI.StartAsync()
+	}
 	path, err := appdb.DefaultPath()
 	if err != nil {
 		a.dbErr = err
@@ -65,8 +76,15 @@ func (a *App) startup(ctx context.Context) {
 
 func (a *App) shutdown(ctx context.Context) {
 	a.stopFolderWatch()
+	a.shutdownLocalAI()
 	if a.db != nil {
 		_ = a.db.Close()
+	}
+}
+
+func (a *App) shutdownLocalAI() {
+	if a.localAI != nil {
+		_ = a.localAI.Stop()
 	}
 }
 
@@ -388,21 +406,7 @@ func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, 
 		proposed = result.Proposed
 		dataJSON = result.DataJSON
 	} else {
-		cli, err := a.cloudClient()
-		if err != nil {
-			return store.AnalysisReport{}, err
-		}
-		blobs := store.CollectNeededText(root, detail.Needs)
-		src := make([]cloud.RoleText, 0, len(blobs))
-		for _, b := range blobs {
-			src = append(src, cloud.RoleText{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
-		}
-		out, err := cli.RunAnalysis(id, src)
-		if err != nil {
-			return store.AnalysisReport{}, err
-		}
-		body = store.FormatReportBody(detail.Label, detail.ID, out.Body)
-		dataJSON = `{"kind":"ai","analysis_id":"` + detail.ID + `"}`
+		return store.AnalysisReport{}, fmt.Errorf("AI analyses run through StartAnalysisJob with local AI")
 	}
 	if err := a.persistResult(detail, root, body, original, proposed, dataJSON); err != nil {
 		return store.AnalysisReport{}, err
@@ -508,6 +512,17 @@ func (a *App) DeleteAnalysisReport(id int64) error {
 	return s.DeleteAnalysisReport(id)
 }
 
+func (a *App) LocalAIStatus() localai.Status {
+	if a.localAI == nil {
+		return localai.Status{Platform: localai.PlatformKey(), Error: "local AI not initialized"}
+	}
+	st := a.localAI.Status()
+	if !st.Ready && !st.Starting && st.Error == "" && !localai.BundlePresent() {
+		st.Error = "local AI bundle not installed in this build"
+	}
+	return st
+}
+
 func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, error) {
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {
@@ -530,30 +545,34 @@ func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, 
 			return cloud.JobStatus{}, fmt.Errorf("missing source: %s", need)
 		}
 	}
-	cli, err := a.cloudClient()
-	if err != nil {
-		return cloud.JobStatus{}, err
-	}
 	blobs := store.CollectNeededText(root, detail.Needs)
-	roles := make([]cloud.RoleText, 0, len(blobs))
-	for _, b := range blobs {
-		roles = append(roles, cloud.RoleText{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
+	if a.localAI == nil || a.localJobs == nil {
+		return cloud.JobStatus{}, fmt.Errorf("local AI is not available")
 	}
-	st, err := cli.SubmitAnalysisJob(id, roles)
+	if !localai.BundlePresent() {
+		return cloud.JobStatus{}, fmt.Errorf("local AI bundle missing — rebuild with ./scripts/fetch-localai.sh and ./scripts/package-localai.sh")
+	}
+	sources := make([]analysis.Source, 0, len(blobs))
+	for _, b := range blobs {
+		sources = append(sources, analysis.Source{Role: b.Role, Rel: b.Rel, Name: b.Name, Text: b.Text})
+	}
+	st, err := a.localJobs.StartJob(a.localAI, id, sources)
 	if err != nil {
-		return cloud.JobStatus{}, err
+		return cloud.JobStatus{}, fmt.Errorf("local AI: %w", err)
 	}
 	return st, nil
 }
 
 func (a *App) GetAnalysisJobStatus(jobID string) (cloud.JobStatus, error) {
-	cli, err := a.cloudClient()
-	if err != nil {
-		return cloud.JobStatus{}, err
+	if a.localJobs == nil {
+		return cloud.JobStatus{}, fmt.Errorf("local AI is not available")
 	}
-	st, err := cli.GetAnalysisJob(jobID)
-	if err != nil {
-		return cloud.JobStatus{}, err
+	if !strings.HasPrefix(jobID, "local-") {
+		return cloud.JobStatus{}, fmt.Errorf("unknown local job")
+	}
+	st, ok := a.localJobs.Get(jobID)
+	if !ok {
+		return cloud.JobStatus{}, fmt.Errorf("unknown local job")
 	}
 	return st, nil
 }

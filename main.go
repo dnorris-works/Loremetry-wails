@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -32,6 +33,11 @@ func main() {
 		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
+		OnBeforeClose: func(ctx context.Context) (prevent bool) {
+			// Ensure the sidecar is torn down before the window closes.
+			app.shutdownLocalAI()
+			return false
+		},
 		Bind: []interface{}{
 			app,
 		},

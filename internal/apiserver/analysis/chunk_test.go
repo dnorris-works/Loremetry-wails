@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	appdb "loremetry/internal/db"
@@ -16,6 +17,20 @@ func TestSplitManuscriptBySize(t *testing.T) {
 	chunks := SplitManuscript(text, 10000)
 	if len(chunks) < 2 {
 		t.Fatalf("expected multiple chunks, got %d", len(chunks))
+	}
+}
+
+func TestTruncateExcerptDoesNotAppendRemainder(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(strings.Repeat("word ", 4000))
+	b.WriteString("\n\nChapter 2\n")
+	b.WriteString(strings.Repeat("more ", 20000))
+	got := TruncateExcerpt(b.String(), 5000)
+	if len(got) > 5200 {
+		t.Fatalf("truncated too large: %d", len(got))
+	}
+	if strings.Contains(got, "Chapter 2") {
+		t.Fatal("truncated must not append later chapters")
 	}
 }
 

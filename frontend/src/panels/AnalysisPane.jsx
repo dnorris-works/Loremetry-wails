@@ -40,14 +40,30 @@ async function openStickyChapter(projectPath, chapterIndex) {
     return api.manuscriptChapterStickyContext(projectPath, ch.rel);
 }
 
-function progressLabel(status, step, stepTotal) {
+function progressLabel(status, step, stepTotal, message) {
+    const msg = (message || '').trim();
     if (status === 'queued')
-        return 'Queued…';
+        return msg || 'Queued…';
+    if (msg && stepTotal > 1 && !msg.includes('(') && !msg.includes('·'))
+        return `${msg} (${step}/${stepTotal})`;
+    if (msg && stepTotal > 1 && msg.includes('·') && !/\(\d+\/\d+\)/.test(msg))
+        return msg.replace('·', `(${step}/${stepTotal}) ·`);
+    if (msg)
+        return msg;
     if (status === 'running' && stepTotal > 1)
         return `Step ${step} of ${stepTotal}…`;
     if (status === 'running')
         return 'Running…';
     return 'Running…';
+}
+
+function formatElapsed(ms) {
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    if (sec < 60)
+        return `${sec}s`;
+    const m = Math.floor(sec / 60);
+    const r = sec % 60;
+    return `${m}m ${String(r).padStart(2, '0')}s`;
 }
 
 function sleep(ms) {
@@ -60,6 +76,9 @@ export function AnalysisPane() {
     const [queueLabels, setQueueLabels] = useState([]);
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState('');
+    const [progressTick, setProgressTick] = useState(0);
+    const progressStepStarted = useRef(0);
+    const lastProgressText = useRef('');
     const [body, setBody] = useState('');
     const [mergeOriginal, setMergeOriginal] = useState('');
     const [mergeProposed, setMergeProposed] = useState('');
@@ -129,6 +148,30 @@ export function AnalysisPane() {
     queueLabelsRef.current = queueLabels;
     busyRef.current = busy;
 
+    useEffect(() => {
+        if (!busy) {
+            progressStepStarted.current = 0;
+            lastProgressText.current = '';
+            return undefined;
+        }
+        const id = setInterval(() => setProgressTick((n) => n + 1), 1000);
+        return () => clearInterval(id);
+    }, [busy]);
+
+    function setLiveProgress(text) {
+        const next = text || '';
+        // Strip trailing elapsed from server messages so step changes reset the timer.
+        const key = next.replace(/\s*·\s*\d+m?\s*\d*s?\s*$/, '').replace(/\s*·\s*\d+s\s*$/, '');
+        if (key !== lastProgressText.current) {
+            lastProgressText.current = key;
+            progressStepStarted.current = Date.now();
+        }
+        else if (!progressStepStarted.current) {
+            progressStepStarted.current = Date.now();
+        }
+        setProgress(next);
+    }
+
     async function handleStickyChapterClick(index) {
         if (!projectPath) {
             setStickyError('Select a book or series folder first');
@@ -166,8 +209,8 @@ export function AnalysisPane() {
             if (!(job.cached || job.status === 'done')) {
                 const jobID = job.job_id || job.jobId;
                 while (job.status !== 'done' && job.status !== 'failed') {
-                    setProgress(progressLabel(job.status, job.step, job.step_total || job.stepTotal));
-                    await sleep(2000);
+                    setLiveProgress(progressLabel(job.status, job.step, job.step_total || job.stepTotal, job.message));
+                    await sleep(1000);
                     job = await api.getAnalysisJobStatus(jobID);
                 }
                 if (job.status === 'failed') {
@@ -189,13 +232,13 @@ export function AnalysisPane() {
         const labels = queueLabelsRef.current;
         setBusy(true);
         setNotice('');
-        setProgress('');
+        setLiveProgress('');
         try {
             let primary = null;
             for (let i = 0; i < runQueue.length; i++) {
                 const id = runQueue[i];
                 const label = labels[i] || id;
-                setProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…');
+                setLiveProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…');
                 const report = await runOne(id);
                 if (id === current.id)
                     primary = report;
@@ -205,19 +248,13 @@ export function AnalysisPane() {
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : 'Could not run analysis';
-            if (msg.includes('PLAN_REQUIRED')) {
-                setNotice('This analysis uses AI. Choose a plan / add credits.');
-            } else if (msg.includes('CREDITS_EMPTY')) {
-                setNotice('This month’s credits are used up.');
-            } else if (msg.includes('CONCURRENT_LIMIT')) {
-                setNotice('Another analysis is already running. Wait or upgrade your plan.');
-            } else {
-                setNotice(msg);
-            }
+            setNotice(msg);
         }
         finally {
             setBusy(false);
             setProgress('');
+            lastProgressText.current = '';
+            progressStepStarted.current = 0;
         }
     }
 
@@ -326,14 +363,18 @@ export function AnalysisPane() {
           </>
         ) : (<div className="overflow-auto p-6">
           {busy || progress ? (
-            <p className="text-sm text-muted-foreground">{progress || 'Running…'}</p>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">{progress || 'Running…'}</p>
+              {busy && progressStepStarted.current > 0 && (
+                <p className="text-xs text-muted-foreground/80">
+                  Elapsed on this step: {formatElapsed(Date.now() - progressStepStarted.current)}
+                  <span className="sr-only">{progressTick}</span>
+                </p>
+              )}
+            </div>
           ) : notice ? (
             <div className="max-w-2xl space-y-2">
               <p className="text-sm text-destructive">{notice}</p>
-              {ai && notice.includes('AI') && (<div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => void api.connectCloudAccount('').then(() => setNotice('Connected. Try Run again.')).catch((e) => setNotice(e instanceof Error ? e.message : 'Connect failed'))}>Connect for AI</Button>
-                <Button size="sm" variant="outline" onClick={() => void api.openBillingCheckout().catch((e) => setNotice(e instanceof Error ? e.message : 'Checkout failed'))}>Choose a plan</Button>
-              </div>)}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Starting…</p>

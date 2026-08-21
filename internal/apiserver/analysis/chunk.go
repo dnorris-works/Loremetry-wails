@@ -77,17 +77,11 @@ func TruncateExcerpt(text string, maxChars int) string {
 	if len(text) <= maxChars {
 		return text
 	}
-	head := text[:maxChars]
-	var b strings.Builder
-	b.WriteString(head)
-	b.WriteString("\n\n[… manuscript truncated for analysis; full text processed in chunks …]\n")
-	for _, loc := range chapterHeadingRE.FindAllStringIndex(text, -1) {
-		if loc[0] >= maxChars {
-			b.WriteString(text[loc[0]:])
-			if idx := strings.Index(b.String()[maxChars:], "\n"); idx > 0 && len(b.String()) > maxChars+200 {
-				break
-			}
-		}
+	cut := maxChars
+	if sp := strings.LastIndex(text[:cut], "\n\n"); sp > maxChars/2 {
+		cut = sp
+	} else if sp := strings.LastIndex(text[:cut], "\n"); sp > maxChars/2 {
+		cut = sp
 	}
-	return b.String()
+	return strings.TrimSpace(text[:cut]) + "\n\n[… truncated for analysis …]\n"
 }

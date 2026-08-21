@@ -50,8 +50,8 @@ type OpenAICompat struct {
 
 const (
 	defaultFireworksBase = "https://api.fireworks.ai/inference/v1"
-	defaultFastModel     = "accounts/fireworks/models/llama-v3p1-8b-instruct"
-	defaultStrongModel   = "accounts/fireworks/models/llama-v3p3-70b-instruct"
+	defaultFastModel     = "accounts/fireworks/models/gpt-oss-20b"
+	defaultStrongModel   = "accounts/fireworks/models/gpt-oss-120b"
 )
 
 func NewFromEnv() Gateway {

@@ -21,6 +21,7 @@ export namespace cloud {
 	    status: string;
 	    step: number;
 	    step_total: number;
+	    message?: string;
 	    body: string;
 	    error: string;
 	    credits: number;
@@ -36,10 +37,40 @@ export namespace cloud {
 	        this.status = source["status"];
 	        this.step = source["step"];
 	        this.step_total = source["step_total"];
+	        this.message = source["message"];
 	        this.body = source["body"];
 	        this.error = source["error"];
 	        this.credits = source["credits"];
 	        this.cached = source["cached"];
+	    }
+	}
+
+}
+
+export namespace localai {
+	
+	export class Status {
+	    ready: boolean;
+	    starting: boolean;
+	    error: string;
+	    model: string;
+	    platform: string;
+	    base_url: string;
+	    context: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Status(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ready = source["ready"];
+	        this.starting = source["starting"];
+	        this.error = source["error"];
+	        this.model = source["model"];
+	        this.platform = source["platform"];
+	        this.base_url = source["base_url"];
+	        this.context = source["context"];
 	    }
 	}
 

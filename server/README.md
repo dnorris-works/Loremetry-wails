@@ -23,8 +23,8 @@ Calls go **direct** to Fireworks — no LangWatch, no TokenMix.
 ```bash
 LOREMETRY_MODEL_BASE_URL=https://api.fireworks.ai/inference/v1
 FIREWORKS_API_KEY=<key>
-LOREMETRY_MODEL_FAST=accounts/fireworks/models/llama-v3p1-8b-instruct
-LOREMETRY_MODEL_STRONG=accounts/fireworks/models/llama-v3p3-70b-instruct
+LOREMETRY_MODEL_FAST=accounts/fireworks/models/gpt-oss-20b
+LOREMETRY_MODEL_STRONG=accounts/fireworks/models/gpt-oss-120b
 ```
 
 `FIREWORKS_API_KEY` is an alias for `LOREMETRY_MODEL_API_KEY`. Without a key, runs use a stub completion.

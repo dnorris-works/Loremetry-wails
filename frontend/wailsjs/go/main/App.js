@@ -282,6 +282,10 @@ export function ListWritingTree() {
   return window['go']['main']['App']['ListWritingTree']();
 }
 
+export function LocalAIStatus() {
+  return window['go']['main']['App']['LocalAIStatus']();
+}
+
 export function ManuscriptChapterStickyContext(arg1, arg2) {
   return window['go']['main']['App']['ManuscriptChapterStickyContext'](arg1, arg2);
 }

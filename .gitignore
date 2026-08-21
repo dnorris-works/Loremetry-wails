@@ -11,3 +11,12 @@ bin/
 .DS_Store
 .kiro/specs
 
+# Local AI binaries and weights (populate via scripts/fetch-localai.sh)
+third_party/llama-server/**/llama-server
+third_party/llama-server/**/llama-server.exe
+third_party/llama-server/**/*.dylib
+third_party/llama-server/**/*.dll
+third_party/llama-server/**/*.so
+third_party/llama-server/**/*.so.*
+third_party/models/*.gguf
+

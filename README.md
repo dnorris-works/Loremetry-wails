@@ -4,16 +4,27 @@
 
 This is a Desktop app with an API
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+Configure the project in `wails.json`.
+See the [Wails project config reference](https://wails.io/docs/reference/project-config).
 
 ## Live Development
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+To run in live development mode, run `wails dev` in the project directory.
+This will run a Vite development server with fast hot reload of frontend
+changes. To call Go methods from a browser, use the Wails
+[dev server](http://localhost:34115) and open it in your browser.
 
 ## Building
 
-To build a redistributable, production mode package, use `wails build`.
+```bash
+wails build
+```
+
+To ship **bundled local AI** (llama-server + GGUF, no runtime download):
+
+```bash
+./scripts/fetch-localai.sh    # once; ~2GB model + sidecars
+./scripts/build-with-localai.sh
+```
+
+See [third_party/README.md](third_party/README.md).
