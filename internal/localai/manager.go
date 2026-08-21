@@ -295,10 +295,14 @@ func (m *Manager) killSidecar() error {
 // MaxPromptChars caps each user message so a buggy caller cannot blow past n_ctx.
 const MaxPromptChars = 24000
 
+// LocalCompleteTimeout is long enough for CPU inference on a full manuscript excerpt.
+const LocalCompleteTimeout = 45 * time.Minute
+
 // Gateway returns an OpenAI-compatible client pointed at the sidecar.
 func (m *Manager) Gateway() models.Gateway {
-	inner := models.NewOpenAICompat(m.BaseURL(), "local", ModelID, ModelID, 0.4)
-	return &cappedGateway{inner: inner, maxUserChars: MaxPromptChars}
+	g := models.NewOpenAICompat(m.BaseURL(), "local", ModelID, ModelID, 0.4)
+	g.HTTP = &http.Client{Timeout: LocalCompleteTimeout}
+	return &cappedGateway{inner: g, maxUserChars: MaxPromptChars}
 }
 
 type cappedGateway struct {

@@ -14,14 +14,27 @@ import (
 	"github.com/google/uuid"
 )
 
+// RunStats persists successful analysis durations for next-run estimates.
+type RunStats interface {
+	AnalysisRunEstimate(analysisID string) (time.Duration, bool)
+	RecordAnalysisRun(analysisID string, d time.Duration)
+}
+
 // JobStore tracks in-process local analysis jobs (same shape as cloud.JobStatus).
 type JobStore struct {
-	mu   sync.Mutex
-	jobs map[string]*cloud.JobStatus
+	mu    sync.Mutex
+	jobs  map[string]*cloud.JobStatus
+	stats RunStats
 }
 
 func NewJobStore() *JobStore {
 	return &JobStore{jobs: map[string]*cloud.JobStatus{}}
+}
+
+func (s *JobStore) SetStats(stats RunStats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats = stats
 }
 
 func (s *JobStore) Get(id string) (cloud.JobStatus, bool) {
@@ -52,22 +65,52 @@ func (s *JobStore) update(id string, fn func(*cloud.JobStatus)) {
 	fn(j)
 }
 
+func (s *JobStore) estimate(analysisID string) (time.Duration, bool) {
+	s.mu.Lock()
+	stats := s.stats
+	s.mu.Unlock()
+	if stats == nil {
+		return 0, false
+	}
+	return stats.AnalysisRunEstimate(analysisID)
+}
+
+func (s *JobStore) record(analysisID string, d time.Duration) {
+	s.mu.Lock()
+	stats := s.stats
+	s.mu.Unlock()
+	if stats == nil {
+		return
+	}
+	stats.RecordAnalysisRun(analysisID, d)
+}
+
 // StartJob runs analysis locally and returns the initial queued/running status.
 func (s *JobStore) StartJob(mgr *Manager, analysisID string, sources []analysis.Source) (cloud.JobStatus, error) {
 	if mgr == nil {
 		return cloud.JobStatus{}, fmt.Errorf("local AI not available")
 	}
 	id := "local-" + uuid.NewString()
+	estSec := 0
+	msg := "Starting local AI…"
+	if est, ok := s.estimate(analysisID); ok && est > 0 {
+		estSec = int(est.Seconds())
+		if estSec < 1 {
+			estSec = 1
+		}
+		msg = fmt.Sprintf("Starting local AI… · typically ~%s", formatElapsed(est))
+	}
 	st := &cloud.JobStatus{
-		JobID:     id,
-		Status:    "running",
-		Step:      0,
-		StepTotal: 1,
-		Message:   "Starting local AI…",
+		JobID:       id,
+		Status:      "running",
+		Step:        0,
+		StepTotal:   1,
+		Message:     msg,
+		EstimateSec: estSec,
 	}
 	s.put(st)
 
-	go s.run(mgr, id, analysisID, sources)
+	go s.run(mgr, id, analysisID, sources, time.Duration(estSec)*time.Second)
 	out := *st
 	return out, nil
 }
@@ -83,17 +126,31 @@ func formatElapsed(d time.Duration) string {
 	return fmt.Sprintf("%dm %02ds", sec/60, sec%60)
 }
 
-func busyMessage(label string, elapsed time.Duration) string {
+func busyMessage(label string, stepElapsed, jobElapsed, estimate time.Duration) string {
 	base := strings.TrimSpace(label)
 	base = strings.TrimRight(base, "….")
 	if base == "" {
 		base = "Working"
 	}
-	return fmt.Sprintf("%s… · %s", base, formatElapsed(elapsed))
+	msg := fmt.Sprintf("%s… · %s", base, formatElapsed(stepElapsed))
+	if estimate <= 0 {
+		return msg
+	}
+	msg += fmt.Sprintf(" · job %s", formatElapsed(jobElapsed))
+	left := estimate - jobElapsed
+	switch {
+	case left > 15*time.Second:
+		msg += fmt.Sprintf(" · ~%s left", formatElapsed(left))
+	case jobElapsed < estimate:
+		msg += " · almost done"
+	default:
+		msg += " · past usual time"
+	}
+	return msg
 }
 
 type heartbeatGateway struct {
-	inner models.Gateway
+	inner  models.Gateway
 	onTick func(elapsed time.Duration)
 }
 
@@ -120,11 +177,17 @@ func (g *heartbeatGateway) Complete(ctx context.Context, tier models.Tier, syste
 	return body, usage, err
 }
 
-func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysis.Source) {
+func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysis.Source, estimate time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
+	jobStart := time.Now()
 	s.update(jobID, func(j *cloud.JobStatus) {
-		j.Message = "Starting local AI…"
+		if estimate > 0 {
+			j.EstimateSec = int(estimate.Seconds())
+			j.Message = fmt.Sprintf("Starting local AI… · typically ~%s", formatElapsed(estimate))
+		} else {
+			j.Message = "Starting local AI…"
+		}
 	})
 	startAI := time.Now()
 	startDone := make(chan struct{})
@@ -140,7 +203,7 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 					if j.Status != "running" {
 						return
 					}
-					j.Message = busyMessage("Starting local AI", time.Since(startAI))
+					j.Message = busyMessage("Starting local AI", time.Since(startAI), time.Since(jobStart), estimate)
 				})
 			}
 		}
@@ -169,19 +232,20 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 
 	gw := &heartbeatGateway{
 		inner: mgr.Gateway(),
-		onTick: func(elapsed time.Duration) {
+		onTick: func(stepElapsed time.Duration) {
 			labelMu.Lock()
 			label := currentLabel
 			started := stepStart
 			labelMu.Unlock()
-			if elapsed <= 0 {
-				elapsed = time.Since(started)
+			if stepElapsed <= 0 {
+				stepElapsed = time.Since(started)
 			}
+			jobElapsed := time.Since(jobStart)
 			s.update(jobID, func(j *cloud.JobStatus) {
 				if j.Status != "running" {
 					return
 				}
-				j.Message = busyMessage(label, elapsed)
+				j.Message = busyMessage(label, stepElapsed, jobElapsed, estimate)
 			})
 		},
 	}
@@ -199,19 +263,21 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 				step = total
 			}
 			setLabel(label)
+			jobElapsed := time.Since(jobStart)
 			s.update(jobID, func(j *cloud.JobStatus) {
 				j.Status = "running"
 				j.Step = step
 				j.StepTotal = total
-				j.Message = busyMessage(label, 0)
+				j.Message = busyMessage(label, 0, jobElapsed, estimate)
 			})
 		},
 	}
 	setLabel("Preparing analysis…")
 	s.update(jobID, func(j *cloud.JobStatus) {
-		j.Message = busyMessage("Preparing analysis", 0)
+		j.Message = busyMessage("Preparing analysis", 0, time.Since(jobStart), estimate)
 	})
 	body, err := runner.Run(context.Background(), analysisID, sources)
+	elapsed := time.Since(jobStart)
 	s.update(jobID, func(j *cloud.JobStatus) {
 		if err != nil {
 			j.Status = "failed"
@@ -225,6 +291,9 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 			j.StepTotal = 1
 		}
 		j.Step = j.StepTotal
-		j.Message = "Done"
+		j.Message = fmt.Sprintf("Done in %s", formatElapsed(elapsed))
 	})
+	if err == nil {
+		s.record(analysisID, elapsed)
+	}
 }

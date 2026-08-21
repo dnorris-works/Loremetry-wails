@@ -71,6 +71,9 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.db = conn
 	a.store = &store.Store{DB: conn, UserID: uid}
+	if a.localJobs != nil {
+		a.localJobs.SetStats(a.store)
+	}
 	a.startFolderWatch()
 }
 

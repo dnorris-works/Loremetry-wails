@@ -339,4 +339,12 @@ CREATE TABLE IF NOT EXISTS analysis_results (
     updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (user_id, project_path, analysis_id)
 );
+
+CREATE TABLE IF NOT EXISTS analysis_run_stats (
+    analysis_id TEXT PRIMARY KEY,
+    run_count   INTEGER NOT NULL DEFAULT 0,
+    last_ms     INTEGER NOT NULL DEFAULT 0,
+    avg_ms      INTEGER NOT NULL DEFAULT 0,
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `

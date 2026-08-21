@@ -22,6 +22,7 @@ export namespace cloud {
 	    step: number;
 	    step_total: number;
 	    message?: string;
+	    estimate_sec?: number;
 	    body: string;
 	    error: string;
 	    credits: number;
@@ -38,6 +39,7 @@ export namespace cloud {
 	        this.step = source["step"];
 	        this.step_total = source["step_total"];
 	        this.message = source["message"];
+	        this.estimate_sec = source["estimate_sec"];
 	        this.body = source["body"];
 	        this.error = source["error"];
 	        this.credits = source["credits"];

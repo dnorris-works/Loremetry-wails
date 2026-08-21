@@ -46,15 +46,16 @@ type RunResponse struct {
 }
 
 type JobStatus struct {
-	JobID     string `json:"job_id"`
-	Status    string `json:"status"`
-	Step      int    `json:"step"`
-	StepTotal int    `json:"step_total"`
-	Message   string `json:"message,omitempty"`
-	Body      string `json:"body"`
-	Error     string `json:"error"`
-	Credits   int    `json:"credits"`
-	Cached    bool   `json:"cached"`
+	JobID       string `json:"job_id"`
+	Status      string `json:"status"`
+	Step        int    `json:"step"`
+	StepTotal   int    `json:"step_total"`
+	Message     string `json:"message,omitempty"`
+	EstimateSec int    `json:"estimate_sec,omitempty"`
+	Body        string `json:"body"`
+	Error       string `json:"error"`
+	Credits     int    `json:"credits"`
+	Cached      bool   `json:"cached"`
 }
 
 type APIError struct {

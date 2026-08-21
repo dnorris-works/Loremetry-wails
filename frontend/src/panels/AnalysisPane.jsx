@@ -76,6 +76,7 @@ export function AnalysisPane() {
     const [queueLabels, setQueueLabels] = useState([]);
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState('');
+    const [estimateSec, setEstimateSec] = useState(0);
     const [progressTick, setProgressTick] = useState(0);
     const progressStepStarted = useRef(0);
     const lastProgressText = useRef('');
@@ -206,9 +207,15 @@ export function AnalysisPane() {
         const info = await api.getAnalysis(id);
         if (usesAI(info)) {
             let job = await api.startAnalysisJob(id, projectPath);
+            const startEst = job.estimate_sec || job.estimateSec || 0;
+            if (startEst > 0)
+                setEstimateSec(startEst);
             if (!(job.cached || job.status === 'done')) {
                 const jobID = job.job_id || job.jobId;
                 while (job.status !== 'done' && job.status !== 'failed') {
+                    const est = job.estimate_sec || job.estimateSec || 0;
+                    if (est > 0)
+                        setEstimateSec(est);
                     setLiveProgress(progressLabel(job.status, job.step, job.step_total || job.stepTotal, job.message));
                     await sleep(1000);
                     job = await api.getAnalysisJobStatus(jobID);
@@ -232,6 +239,7 @@ export function AnalysisPane() {
         const labels = queueLabelsRef.current;
         setBusy(true);
         setNotice('');
+        setEstimateSec(0);
         setLiveProgress('');
         try {
             let primary = null;
@@ -253,6 +261,7 @@ export function AnalysisPane() {
         finally {
             setBusy(false);
             setProgress('');
+            setEstimateSec(0);
             lastProgressText.current = '';
             progressStepStarted.current = 0;
         }
@@ -365,6 +374,11 @@ export function AnalysisPane() {
           {busy || progress ? (
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">{progress || 'Running…'}</p>
+              {estimateSec > 0 && (
+                <p className="text-xs text-muted-foreground/80">
+                  Typical for this analysis: ~{formatElapsed(estimateSec * 1000)}
+                </p>
+              )}
               {busy && progressStepStarted.current > 0 && (
                 <p className="text-xs text-muted-foreground/80">
                   Elapsed on this step: {formatElapsed(Date.now() - progressStepStarted.current)}
