@@ -40,7 +40,7 @@ function AnalysisUsesHover({ item, sources, hasProject, children }) {
         </div>
     );
     return (
-        <DelayedTooltip delayMs={300} content={content} className="relative block w-full">
+        <DelayedTooltip delayMs={300} side="top" content={content} className="relative block w-full">
             {children}
         </DelayedTooltip>
     );

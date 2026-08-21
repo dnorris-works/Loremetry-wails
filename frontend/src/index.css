@@ -4,20 +4,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-background: #f8fafc;
+  --color-background: #e8ecf1;
   --color-foreground: #0f172a;
-  --color-card: #ffffff;
+  --color-card: #f1f4f8;
   --color-primary: #3b82f6;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #e2e8f0;
+  --color-secondary: #d8dee8;
   --color-secondary-foreground: #0f172a;
-  --color-muted: #f1f5f9;
+  --color-muted: #dde3eb;
   --color-muted-foreground: #64748b;
-  --color-accent: #e2e8f0;
+  --color-accent: #d0d7e2;
   --color-accent-foreground: #0f172a;
   --color-destructive: #ef4444;
-  --color-border: #e2e8f0;
-  --color-input: #e2e8f0;
+  --color-border: #c8d0dc;
+  --color-input: #c8d0dc;
   --color-ring: #3b82f6;
 }
 
