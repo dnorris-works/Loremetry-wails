@@ -56,6 +56,23 @@ func TestStepPromptAnalyzeChapterIncludesHeadings(t *testing.T) {
 	}
 }
 
+func TestStepPromptAnalyzeChapterManuscriptLast(t *testing.T) {
+	ensureChapterNotesCatalog(t)
+	sources := []Source{
+		{Role: "manuscript", Name: "02.md", Text: "CHAPTER-TEXT-MARKER"},
+		{Role: "characters", Name: "hero.md", Text: "SHARED-PROFILE-MARKER"},
+	}
+	user := StepPrompt("analyze_chapter", "pov_discipline", sources, nil)
+	sharedIdx := strings.Index(user, "SHARED-PROFILE-MARKER")
+	chIdx := strings.Index(user, "CHAPTER-TEXT-MARKER")
+	if sharedIdx < 0 || chIdx < 0 {
+		t.Fatalf("missing markers in:\n%s", user)
+	}
+	if sharedIdx > chIdx {
+		t.Fatalf("manuscript should follow shared sources; shared@%d chapter@%d", sharedIdx, chIdx)
+	}
+}
+
 func TestStepPromptFinalUsesSpec(t *testing.T) {
 	ensureChapterNotesCatalog(t)
 	user := StepPrompt("final", "show_dont_tell", nil, []string{"### Ch1\n\nnotes"})

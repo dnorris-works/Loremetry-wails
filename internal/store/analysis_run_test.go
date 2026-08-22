@@ -65,3 +65,26 @@ func TestRunZeigarnikMerge(t *testing.T) {
 		t.Fatalf("compare-only analysis must not build a report body, got %q", out.Markdown)
 	}
 }
+
+func TestRunLocalAnalysisMissingSource(t *testing.T) {
+	ensureCatalogDB(t)
+	root := t.TempDir()
+	ch := filepath.Join(root, "01_Manuscript", "01_Chapters")
+	if err := os.MkdirAll(ch, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ch, "Ch-001.md"), []byte("Hello world."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	detail, ok := GetAnalysisDetail("chapter_summaries")
+	if !ok {
+		t.Fatal("chapter_summaries missing from catalog")
+	}
+	err := ValidateAnalysisNeeds(root, detail.Needs)
+	if err == nil {
+		t.Fatal("expected missing characters source")
+	}
+	if !strings.Contains(err.Error(), "missing source: characters") {
+		t.Fatalf("got %v", err)
+	}
+}

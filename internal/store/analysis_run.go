@@ -28,15 +28,10 @@ func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 	if root == "" {
 		return AnalysisRunResult{}, fmt.Errorf("select a book or series first")
 	}
-	src := MatchAnalysisSources(root)
-	for _, need := range detail.Needs {
-		role := src.Role(need)
-		if !role.Present || len(role.Files) == 0 {
-			return AnalysisRunResult{}, fmt.Errorf("missing source: %s", need)
-		}
+	if err := ValidateAnalysisNeeds(root, detail.Needs); err != nil {
+		return AnalysisRunResult{}, err
 	}
 	blobs := CollectNeededText(root, detail.Needs)
-	text := joinRoleText(blobs, "manuscript")
 	outcome, err := RunLocalFromCatalog(detail, blobs)
 	if err != nil {
 		return AnalysisRunResult{}, err
@@ -45,7 +40,6 @@ func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 	original := outcome.Original
 	proposed := outcome.Proposed
 	dataJSON := outcome.DataJSON
-	_ = text
 	md := ""
 	if !detail.UsesMerge {
 		md = FormatReportBody(detail.Label, detail.ID, content)

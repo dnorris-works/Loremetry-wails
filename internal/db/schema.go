@@ -203,7 +203,7 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('scene_sequel_balance', 'structure', 'Craft — Structure & Pacing', 'Scene/Sequel Balance', 'Action vs reflective passages and where momentum stalls.', 'Add action or reflection where the report shows momentum stalling.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 21);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('pov_discipline', 'structure', 'Craft — Structure & Pacing', 'POV Discipline', 'POV shifts, head-hopping, and information leaks.', 'Fix head-hops and information leaks so each scene stays in the intended POV.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 22);
+  ('pov_discipline', 'structure', 'Craft — Structure & Pacing', 'POV Discipline', 'POV shifts, head-hopping, and information leaks.', 'Fix head-hops and information leaks so each scene stays in the intended POV.', '["manuscript","characters"]', '[]', 1, 0, 'by_chapter', 22);
 
 -- Group: Craft — Plot & Continuity
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -217,21 +217,21 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('macguffin_clarity', 'plot', 'Craft — Plot & Continuity', 'MacGuffin Clarity', 'Whether the driving object or goal is clear and motivates action.', 'Clarify the driving object or goal if characters (or readers) lose track of why it matters.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 27);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('timeline_flashback', 'plot', 'Craft — Plot & Continuity', 'Timeline / Flashback', 'Whether timeline shifts and flashbacks clarify or confuse.', 'Clarify or cut flashbacks that confuse chronology rather than deepen stakes.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 28);
+  ('timeline_flashback', 'plot', 'Craft — Plot & Continuity', 'Timeline / Flashback', 'Whether timeline shifts and flashbacks clarify or confuse.', 'Clarify or cut flashbacks that confuse chronology rather than deepen stakes.', '["manuscript","characters","locations"]', '[]', 1, 0, 'by_chapter', 28);
 
 -- Group: Craft — Character & Theme
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('want_vs_need', 'character', 'Craft — Character & Theme', 'Want vs Need', 'External want vs internal need for major characters.', 'Align scenes so external want and internal need pull characters through the arc.', '["manuscript","characters"]', '[]', 1, 0, 'by_chapter', 29);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('thematic_throughline', 'character', 'Craft — Character & Theme', 'Thematic Throughline', 'How the central theme holds across scenes and arcs.', 'Reinforce or prune scenes that drift from the central theme.', '["manuscript","bible"]', '[]', 1, 0, 'by_chapter', 30);
+  ('thematic_throughline', 'character', 'Craft — Character & Theme', 'Thematic Throughline', 'How the central theme holds across scenes and arcs.', 'Reinforce or prune scenes that drift from the central theme.', '["manuscript","themes"]', '[]', 1, 0, 'by_chapter', 30);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('mirror_foil_character', 'character', 'Craft — Character & Theme', 'Mirror/Foil Characters', 'Reflect and contrast pairings and what they do for theme.', 'Use mirror/foil pairings to sharpen theme; cut pairings that do no thematic work.', '["manuscript","characters"]', '[]', 1, 0, 'by_chapter', 31);
+  ('mirror_foil_character', 'character', 'Craft — Character & Theme', 'Mirror/Foil Characters', 'Reflect and contrast pairings and what they do for theme.', 'Use mirror/foil pairings to sharpen theme; cut pairings that do no thematic work.', '["manuscript","characters","themes"]', '[]', 1, 0, 'by_chapter', 31);
 
 -- Group: Craft — Reader Engagement
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('zeigarnik_analysis', 'engagement', 'Craft — Reader Engagement', 'Zeigarnik Effect', 'Heuristic scan for open loops, cliffhangers, and unresolved threads. No AI.', 'Use Compare to review flagged chapter endings; strengthen weak open loops and leave intentional closures alone.', '["manuscript"]', '[]', 0, 1, 'single', 32);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('dramatic_irony', 'engagement', 'Craft — Reader Engagement', 'Dramatic Irony', 'Moments the reader knows more than the characters.', 'Lean into reader-knows-more moments where tension or humor pays off.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 33);
+  ('dramatic_irony', 'engagement', 'Craft — Reader Engagement', 'Dramatic Irony', 'Moments the reader knows more than the characters.', 'Lean into reader-knows-more moments where tension or humor pays off.', '["manuscript","characters"]', '[]', 1, 0, 'by_chapter', 33);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('stakes_escalation', 'engagement', 'Craft — Reader Engagement', 'Stakes Escalation', 'How stakes rise, plateau, or reverse across the arc.', 'Raise or reset stakes where the arc plateaus; cut reversals that undercut tension.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 34);
 
@@ -241,15 +241,15 @@ INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usa
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('series_pacing_comparator', 'series', 'Craft — Series', 'Series Pacing Comparator', 'Pacing compared across books in a series.', 'Adjust book length and beat density so series pacing feels consistent.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 36);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('recurring_motif_theme_series', 'series', 'Craft — Series', 'Recurring Motif/Theme (Series)', 'Motifs and themes across books — cohesion vs contradiction.', 'Keep motifs coherent across books; resolve contradictions in theme or symbol.', '["bible"]', '[]', 1, 0, 'two_step', 37);
+  ('recurring_motif_theme_series', 'series', 'Craft — Series', 'Recurring Motif/Theme (Series)', 'Motifs and themes across books — cohesion vs contradiction.', 'Keep motifs coherent across books; resolve contradictions in theme or symbol.', '["bible","themes"]', '[]', 1, 0, 'two_step', 37);
 
 -- Group: Publish
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('blurb_builder', 'publish', 'Publish', 'Blurb Builder', 'Amazon, back-cover, and BookBub description variants.', 'Pick a variant for Amazon, back cover, or BookBub and paste it into that channel.', '["manuscript","bible","blurb"]', '[]', 1, 0, 'by_chapter', 38);
+  ('blurb_builder', 'publish', 'Publish', 'Blurb Builder', 'Amazon, back-cover, and BookBub description variants.', 'Pick a variant for Amazon, back cover, or BookBub and paste it into that channel.', '["manuscript","blurb","characters","themes"]', '[]', 1, 0, 'by_chapter', 38);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('print_production', 'publish', 'Publish', 'Print Production', 'Page count, trim, spine, and print checklists from word count. No AI.', 'Use word count and spine estimates when choosing trim and ordering a KDP/Ingram cover template.', '["manuscript"]', '[]', 0, 0, 'single', 39);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('ai_beta_reader', 'publish', 'Publish', 'AI Beta Reader', 'Chapter-by-chapter reader reactions, engagement, and put-down risk.', 'Prioritize chapters with high put-down risk; revise hooks and endings there first.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 40);
+  ('ai_beta_reader', 'publish', 'Publish', 'AI Beta Reader', 'Chapter-by-chapter reader reactions, engagement, and put-down risk.', 'Prioritize chapters with high put-down risk; revise hooks and endings there first.', '["manuscript","characters","locations"]', '[]', 1, 0, 'by_chapter', 40);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('cliffhanger_score', 'publish', 'Publish', 'Cliffhanger Score', 'How hard each chapter ending pulls into the next.', 'Strengthen weak chapter endings so readers turn the page.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 41);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -360,5 +360,12 @@ CREATE TABLE IF NOT EXISTS chapter_descriptions (
     description  TEXT NOT NULL DEFAULT '',
     updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (project_path, chapter_rel)
+);
+
+CREATE TABLE IF NOT EXISTS analysis_job_cache (
+    cache_key    TEXT PRIMARY KEY,
+    analysis_id  TEXT NOT NULL,
+    body         TEXT NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `

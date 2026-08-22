@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -14,7 +16,32 @@ const (
 	ModelID = "qwen2.5-3b-instruct"
 	DefaultPort = 18765
 	ContextSize = 32768
+	// DefaultPromptCacheRAMMiB caps host RAM used for llama-server KV prompt cache.
+	DefaultPromptCacheRAMMiB = 4096
 )
+
+// PromptCacheRAMMiB returns MiB for --cache-ram. LOREMETRY_LLAMA_CACHE_RAM overrides;
+// use -1 for no limit, 0 to omit the flag (llama-server default).
+func PromptCacheRAMMiB() int {
+	raw := strings.TrimSpace(os.Getenv("LOREMETRY_LLAMA_CACHE_RAM"))
+	if raw == "" {
+		return DefaultPromptCacheRAMMiB
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return DefaultPromptCacheRAMMiB
+	}
+	return n
+}
+
+// SidecarCacheArgs returns llama-server flags for host RAM KV prompt caching.
+func SidecarCacheArgs() []string {
+	ram := PromptCacheRAMMiB()
+	if ram == 0 {
+		return nil
+	}
+	return []string{"--cache-ram", strconv.Itoa(ram)}
+}
 
 // PlatformKey returns e.g. darwin-arm64, darwin-amd64, windows-amd64.
 func PlatformKey() string {

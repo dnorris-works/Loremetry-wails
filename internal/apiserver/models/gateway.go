@@ -20,9 +20,10 @@ const (
 )
 
 type Usage struct {
-	PromptTokens     int
-	CompletionTokens int
-	TotalTokens      int
+	PromptTokens       int
+	CompletionTokens   int
+	TotalTokens        int
+	CachedPromptTokens int
 }
 
 type Gateway interface {
@@ -183,6 +184,9 @@ func (g *OpenAICompat) completeOnce(ctx context.Context, tier Tier, system, user
 			PromptTokens     int `json:"prompt_tokens"`
 			CompletionTokens int `json:"completion_tokens"`
 			TotalTokens      int `json:"total_tokens"`
+			PromptTokensDetails *struct {
+				CachedTokens int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(raw, &parsed); err != nil {
@@ -191,10 +195,15 @@ func (g *OpenAICompat) completeOnce(ctx context.Context, tier Tier, system, user
 	if len(parsed.Choices) == 0 {
 		return "", Usage{}, fmt.Errorf("empty model response")
 	}
+	cached := 0
+	if parsed.Usage.PromptTokensDetails != nil {
+		cached = parsed.Usage.PromptTokensDetails.CachedTokens
+	}
 	usage := Usage{
-		PromptTokens:     parsed.Usage.PromptTokens,
-		CompletionTokens: parsed.Usage.CompletionTokens,
-		TotalTokens:      parsed.Usage.TotalTokens,
+		PromptTokens:       parsed.Usage.PromptTokens,
+		CompletionTokens:   parsed.Usage.CompletionTokens,
+		TotalTokens:        parsed.Usage.TotalTokens,
+		CachedPromptTokens: cached,
 	}
 	return parsed.Choices[0].Message.Content, usage, nil
 }

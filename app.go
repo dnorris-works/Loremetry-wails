@@ -73,6 +73,7 @@ func (a *App) startup(ctx context.Context) {
 	a.store = &store.Store{DB: conn, UserID: uid}
 	if a.localJobs != nil {
 		a.localJobs.SetStats(a.store)
+		a.localJobs.SetResultCache(a.store)
 	}
 	a.startFolderWatch()
 }
@@ -411,12 +412,8 @@ func (a *App) runAnalysis(id string, projectPath string) (store.AnalysisReport, 
 	if root == "" {
 		return store.AnalysisReport{}, fmt.Errorf("select a book or series first")
 	}
-	src := store.MatchAnalysisSources(root)
-	for _, need := range detail.Needs {
-		role := src.Role(need)
-		if !role.Present || len(role.Files) == 0 {
-			return store.AnalysisReport{}, fmt.Errorf("missing source: %s", need)
-		}
+	if err := store.ValidateAnalysisNeeds(root, detail.Needs); err != nil {
+		return store.AnalysisReport{}, err
 	}
 	var body string
 	var original, proposed, dataJSON string
@@ -573,12 +570,8 @@ func (a *App) StartAnalysisJob(id string, projectPath string, chapterRels []stri
 	if root == "" {
 		return cloud.JobStatus{}, fmt.Errorf("select a book or series first")
 	}
-	src := store.MatchAnalysisSources(root)
-	for _, need := range detail.Needs {
-		role := src.Role(need)
-		if !role.Present || len(role.Files) == 0 {
-			return cloud.JobStatus{}, fmt.Errorf("missing source: %s", need)
-		}
+	if err := store.ValidateAnalysisNeeds(root, detail.Needs); err != nil {
+		return cloud.JobStatus{}, err
 	}
 	blobs := store.CollectNeededText(root, detail.Needs)
 	if id == "chapter_summaries" {

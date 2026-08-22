@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -81,6 +82,22 @@ func CollectNeededText(projectPath string, needs []string) []RoleText {
 		}
 	}
 	return out
+}
+
+// ValidateAnalysisNeeds ensures every role listed in the catalog row is present on disk.
+func ValidateAnalysisNeeds(projectPath string, needs []string) error {
+	root := ResolveProjectRoot(projectPath)
+	if root == "" {
+		return fmt.Errorf("select a book or series first")
+	}
+	src := MatchAnalysisSources(root)
+	for _, need := range needs {
+		role := src.Role(need)
+		if !role.Present || len(role.Files) == 0 {
+			return fmt.Errorf("missing source: %s", need)
+		}
+	}
+	return nil
 }
 
 type analysisRoleSpec struct {

@@ -56,7 +56,7 @@ func StepPrompt(step, analysisID string, sources []Source, prior []string) strin
 		}
 	}
 	b.WriteString("\n\n")
-	for _, s := range sources {
+	for _, s := range orderSourcesForStep(step, sources) {
 		b.WriteString("## ")
 		b.WriteString(s.Role)
 		if s.Name != "" {
@@ -75,6 +75,23 @@ func StepPrompt(step, analysisID string, sources []Source, prior []string) strin
 		b.WriteString("\n\n")
 	}
 	return b.String()
+}
+
+// orderSourcesForStep puts shared (non-manuscript) sources before the chapter text
+// so analyze_chapter calls share a stable prompt prefix for KV / provider caching.
+func orderSourcesForStep(step string, sources []Source) []Source {
+	if step != "analyze_chapter" || len(sources) <= 1 {
+		return sources
+	}
+	var shared, manuscript []Source
+	for _, s := range sources {
+		if s.Role == "manuscript" {
+			manuscript = append(manuscript, s)
+		} else {
+			shared = append(shared, s)
+		}
+	}
+	return append(shared, manuscript...)
 }
 
 type Profile int

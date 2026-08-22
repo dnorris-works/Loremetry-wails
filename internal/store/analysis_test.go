@@ -59,4 +59,23 @@ func TestAnalysisCatalog(t *testing.T) {
 	if !ok || len(blurb.Needs) != 4 {
 		t.Fatalf("blurb_builder needs %+v", blurb.Needs)
 	}
+	continuity, ok := GetAnalysisDetail("continuity_check")
+	if !ok || len(continuity.Needs) != 3 {
+		t.Fatalf("continuity_check needs %+v", continuity.Needs)
+	}
+	beta, ok := GetAnalysisDetail("ai_beta_reader")
+	if !ok || len(beta.Needs) != 3 || beta.Needs[1] != "characters" {
+		t.Fatalf("ai_beta_reader needs %+v", beta.Needs)
+	}
+	irony, ok := GetAnalysisDetail("dramatic_irony")
+	if !ok || len(irony.Needs) != 2 || irony.Needs[1] != "characters" {
+		t.Fatalf("dramatic_irony needs %+v", irony.Needs)
+	}
+	mirror, ok := GetAnalysisDetail("mirror_foil_character")
+	if !ok || len(mirror.Needs) != 3 || mirror.Needs[2] != "themes" {
+		t.Fatalf("mirror_foil_character needs %+v", mirror.Needs)
+	}
+	if pov.ChapterInstruction == "" || pov.FinalInstruction == "" {
+		t.Fatalf("pov_discipline prompts empty")
+	}
 }

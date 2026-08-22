@@ -20,10 +20,11 @@ type Entry struct {
 	SystemPrompt     string
 	UserPrompt       string
 	ResponseBody     string
-	PromptTokens     int
-	CompletionTokens int
-	TotalTokens      int
-	DurationMs       int
+	PromptTokens       int
+	CompletionTokens   int
+	TotalTokens        int
+	CachedPromptTokens int
+	DurationMs         int
 	HTTPStatus       int
 	ErrorText        string
 }
@@ -45,12 +46,12 @@ func (l *Logger) Log(e Entry) {
 			INSERT INTO ai_call_log
 				(user_id, job_id, analysis_id, step_name, model, model_tier,
 				 system_prompt, user_prompt, response_body,
-				 prompt_tokens, completion_tokens, total_tokens,
+				 prompt_tokens, completion_tokens, total_tokens, cached_prompt_tokens,
 				 duration_ms, http_status, error_text)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
 			e.UserID, e.JobID, e.AnalysisID, e.StepName, e.Model, e.ModelTier,
 			e.SystemPrompt, e.UserPrompt, e.ResponseBody,
-			e.PromptTokens, e.CompletionTokens, e.TotalTokens,
+			e.PromptTokens, e.CompletionTokens, e.TotalTokens, e.CachedPromptTokens,
 			e.DurationMs, e.HTTPStatus, e.ErrorText)
 		if err != nil {
 			log.Printf("journal: %v", err)
@@ -109,10 +110,11 @@ func (g *LoggingGateway) Complete(ctx context.Context, tier models.Tier, system,
 		SystemPrompt:     system,
 		UserPrompt:       user,
 		ResponseBody:     body,
-		PromptTokens:     usage.PromptTokens,
-		CompletionTokens: usage.CompletionTokens,
-		TotalTokens:      usage.TotalTokens,
-		DurationMs:       int(dur.Milliseconds()),
+		PromptTokens:       usage.PromptTokens,
+		CompletionTokens:   usage.CompletionTokens,
+		TotalTokens:        usage.TotalTokens,
+		CachedPromptTokens: usage.CachedPromptTokens,
+		DurationMs:         int(dur.Milliseconds()),
 		HTTPStatus:       200,
 	}
 	if err != nil {

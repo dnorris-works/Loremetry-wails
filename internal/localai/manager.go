@@ -128,6 +128,7 @@ func (m *Manager) launchAndWait(ctx context.Context) error {
 		"-c", fmt.Sprintf("%d", ContextSize),
 		"--jinja",
 	}
+	args = append(args, SidecarCacheArgs()...)
 	cmd := exec.Command(paths.Sidecar, args...)
 	cmd.Dir = filepath.Dir(paths.Sidecar)
 	setSidecarSysProcAttr(cmd)

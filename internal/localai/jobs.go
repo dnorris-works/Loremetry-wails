@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"loremetry/internal/apiserver/analysis"
+	"loremetry/internal/apiserver/cache"
 	"loremetry/internal/apiserver/models"
 	"loremetry/internal/cloud"
 
@@ -21,12 +22,19 @@ type RunStats interface {
 	RecordAnalysisRun(analysisID string, d time.Duration)
 }
 
+// ResultCache stores completed local analysis outputs for instant re-runs.
+type ResultCache interface {
+	GetAnalysisJobCache(key string) (body string, ok bool)
+	PutAnalysisJobCache(key, analysisID, body string)
+}
+
 // JobStore tracks in-process local analysis jobs (same shape as cloud.JobStatus).
 type JobStore struct {
 	mu      sync.Mutex
 	jobs    map[string]*cloud.JobStatus
 	cancels map[string]context.CancelFunc
 	stats   RunStats
+	cache   ResultCache
 }
 
 func NewJobStore() *JobStore {
@@ -40,6 +48,12 @@ func (s *JobStore) SetStats(stats RunStats) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stats = stats
+}
+
+func (s *JobStore) SetResultCache(cache ResultCache) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache = cache
 }
 
 func (s *JobStore) Get(id string) (cloud.JobStatus, bool) {
@@ -125,6 +139,23 @@ func (s *JobStore) StartJob(mgr *Manager, analysisID string, sources []analysis.
 	if mgr == nil {
 		return cloud.JobStatus{}, fmt.Errorf("local AI not available")
 	}
+	cacheKey := cache.SourcesHash(analysisID, sources)
+	s.mu.Lock()
+	resultCache := s.cache
+	s.mu.Unlock()
+	if resultCache != nil {
+		if body, ok := resultCache.GetAnalysisJobCache(cacheKey); ok {
+			id := "local-" + uuid.NewString()
+			st := &cloud.JobStatus{
+				JobID:  id,
+				Status: "done",
+				Body:   body,
+				Cached: true,
+			}
+			s.put(st)
+			return *st, nil
+		}
+	}
 	id := "local-" + uuid.NewString()
 	estSec := 0
 	msg := "Starting local AI…"
@@ -145,7 +176,7 @@ func (s *JobStore) StartJob(mgr *Manager, analysisID string, sources []analysis.
 	}
 	s.put(st)
 
-	go s.run(mgr, id, analysisID, sources, time.Duration(estSec)*time.Second)
+	go s.run(mgr, id, analysisID, sources, cacheKey, time.Duration(estSec)*time.Second)
 	out := *st
 	return out, nil
 }
@@ -221,7 +252,7 @@ func (g *heartbeatGateway) Complete(ctx context.Context, tier models.Tier, syste
 	return body, usage, err
 }
 
-func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysis.Source, estimate time.Duration) {
+func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysis.Source, cacheKey string, estimate time.Duration) {
 	jobCtx, jobCancel := context.WithCancel(context.Background())
 	s.setCancel(jobID, jobCancel)
 	defer func() {
@@ -374,5 +405,11 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 	})
 	if err == nil {
 		s.record(analysisID, elapsed)
+		s.mu.Lock()
+		resultCache := s.cache
+		s.mu.Unlock()
+		if resultCache != nil && cacheKey != "" && body != "" {
+			resultCache.PutAnalysisJobCache(cacheKey, analysisID, body)
+		}
 	}
 }

@@ -120,6 +120,7 @@ func migrate(ctx context.Context, db *sql.DB) error {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
+	_, _ = db.ExecContext(ctx, `ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS cached_prompt_tokens INT NOT NULL DEFAULT 0`)
 	if os.Getenv("LOREMETRY_DEV_SEED") == "1" {
 		return seedDev(ctx, db)
 	}

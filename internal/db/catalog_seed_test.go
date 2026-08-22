@@ -30,4 +30,21 @@ func TestSeedCatalogPrompts(t *testing.T) {
 	if err != nil || rules == "" {
 		t.Fatalf("analysis_source_rules: %v %q", err, rules)
 	}
+
+	checks := map[string]string{
+		"chapter_summaries":          `["manuscript","characters"]`,
+		"continuity_check":           `["manuscript","characters","locations"]`,
+		"ai_beta_reader":             `["manuscript","characters","locations"]`,
+		"thematic_throughline":       `["manuscript","themes"]`,
+		"recurring_motif_theme_series": `["bible","themes"]`,
+	}
+	for id, want := range checks {
+		var got string
+		if err := conn.QueryRow(`SELECT needs FROM analysis_catalog WHERE id = ?`, id).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+		if got != want {
+			t.Fatalf("%s needs %q want %q", id, got, want)
+		}
+	}
 }
