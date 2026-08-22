@@ -24,6 +24,35 @@ func (s *Store) AnalysisRunEstimate(analysisID string) (time.Duration, bool) {
 	return time.Duration(avgMs) * time.Millisecond, true
 }
 
+// ListAnalysisRunEstimates returns analysis_id → typical duration in whole seconds
+// for analyses that have at least one recorded successful run.
+func (s *Store) ListAnalysisRunEstimates() map[string]int {
+	out := map[string]int{}
+	if s == nil || s.DB == nil {
+		return out
+	}
+	rows, err := s.DB.Query(`
+		SELECT analysis_id, avg_ms FROM analysis_run_stats
+		WHERE run_count > 0 AND avg_ms > 0`)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var avgMs int64
+		if err := rows.Scan(&id, &avgMs); err != nil || id == "" || avgMs <= 0 {
+			continue
+		}
+		sec := int(avgMs / 1000)
+		if sec < 1 {
+			sec = 1
+		}
+		out[id] = sec
+	}
+	return out
+}
+
 // RecordAnalysisRun stores a successful local AI run duration for later estimates.
 func (s *Store) RecordAnalysisRun(analysisID string, d time.Duration) {
 	if s == nil || s.DB == nil || analysisID == "" {

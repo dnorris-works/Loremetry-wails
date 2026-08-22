@@ -119,6 +119,8 @@ export function ListAnalysisCatalog():Promise<Array<store.AnalysisGroup>>;
 
 export function ListAnalysisReports():Promise<Array<store.AnalysisReportSummary>>;
 
+export function ListAnalysisRunEstimates():Promise<Record<string, number>>;
+
 export function ListChapters(arg1:number):Promise<Array<store.Chapter>>;
 
 export function ListCharacters(arg1:number):Promise<Array<store.CharacterProfile>>;

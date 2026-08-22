@@ -37,4 +37,9 @@ func TestAnalysisRunEstimateRollingAvg(t *testing.T) {
 	if est < 5*time.Minute || est > 7*time.Minute {
 		t.Fatalf("rolling avg got %v", est)
 	}
+
+	all := s.ListAnalysisRunEstimates()
+	if sec, ok := all["pov_discipline"]; !ok || sec < 300 || sec > 420 {
+		t.Fatalf("list estimates got %v", all)
+	}
 }

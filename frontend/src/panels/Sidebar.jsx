@@ -8,6 +8,7 @@ import { Check, Pencil, Plus, Settings, Database, Moon, Sun, Trash2, Eye, EyeOff
 import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
+import { formatElapsed } from '@/lib/utils';
 
 const nest = 'ml-[2ch] border-l border-border pl-2';
 
@@ -16,10 +17,17 @@ function needReady(sources, need) {
     return !!(role?.present && (role.files || []).length > 0);
 }
 
-function AnalysisUsesHover({ item, sources, hasProject, children }) {
+function AnalysisUsesHover({ item, sources, hasProject, estimateSec, children }) {
     const needs = item.needs || [];
+    const description = (item.description || '').trim();
     const content = (
         <div className="text-left">
+            {description && (
+                <div className="mb-1.5 max-w-[16rem] leading-snug opacity-90">{description}</div>
+            )}
+            {estimateSec > 0 && (
+                <div className="mb-1.5 opacity-80">Typical: ~{formatElapsed(estimateSec * 1000)}</div>
+            )}
             <div className="mb-1 font-semibold uppercase tracking-wide opacity-80">Uses</div>
             {needs.length === 0 ? (
                 <div className="opacity-80">No sources required</div>
@@ -40,7 +48,7 @@ function AnalysisUsesHover({ item, sources, hasProject, children }) {
         </div>
     );
     return (
-        <DelayedTooltip delayMs={300} side="top" content={content} className="relative block w-full">
+        <DelayedTooltip delayMs={300} side="right" content={content} className="relative block w-full">
             {children}
         </DelayedTooltip>
     );
@@ -76,11 +84,24 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
         await persistTheme(next, isAuthenticated());
     }
     const [tab, setTab] = useState('projects');
-    const [hideAI, setHideAI] = useState(false);
+    const [analysisFilter, setAnalysisFilter] = useState('all');
     const [analysisSources, setAnalysisSources] = useState(null);
+    const [runEstimates, setRunEstimates] = useState({});
     useEffect(() => {
         if (!hasProject && tab === 'analysis') setTab('projects');
     }, [hasProject, tab]);
+    useEffect(() => {
+        if (tab !== 'analysis') {
+            return;
+        }
+        let cancelled = false;
+        void api.listAnalysisRunEstimates().then((m) => {
+            if (!cancelled) setRunEstimates(m && typeof m === 'object' ? m : {});
+        }).catch(() => {
+            if (!cancelled) setRunEstimates({});
+        });
+        return () => { cancelled = true; };
+    }, [tab, refreshKey]);
     useEffect(() => {
         if (tab !== 'analysis' || !selection?.dir) {
             setAnalysisSources(null);
@@ -123,14 +144,25 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
       </div>
       <div className="flex-1 overflow-auto p-2">
         {tab === 'analysis' && (<>
-          <div className="mb-2 flex items-center gap-1.5 px-1">
-            <button type="button" className={`relative h-4 w-7 rounded-full transition-colors ${hideAI ? 'bg-muted' : 'bg-primary'}`} onClick={() => setHideAI((v) => !v)} title={hideAI ? 'Show AI analyses' : 'Hide AI analyses'}>
-              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${hideAI ? 'left-0.5' : 'left-3.5'}`}/>
-            </button>
-            <span className="text-[10px] text-muted-foreground">{hideAI ? 'Local only' : 'All analyses'}</span>
+          <div className="mb-2 flex rounded border border-border text-[10px]">
+            {[['all', 'All'], ['local', 'Local'], ['ai', 'AI']].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`flex-1 px-2 py-1 ${analysisFilter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setAnalysisFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {analysisGroups.map((g) => {
-            const items = (g.items || []).filter((item) => !hideAI || !(item.uses_ai ?? item.usesAI));
+            const items = (g.items || []).filter((item) => {
+              const ai = !!(item.uses_ai ?? item.usesAI);
+              if (analysisFilter === 'local') return !ai;
+              if (analysisFilter === 'ai') return ai;
+              return true;
+            });
             if (items.length === 0) return null;
             return (<div key={g.id} className="mb-3">
               <div className="px-1 pb-1 text-[10px] font-semibold uppercase text-muted-foreground">{g.label}</div>
@@ -139,7 +171,7 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
                 const selected = (analysisQueue || []).includes(item.id);
                 const primary = analysisId === item.id;
                 return (
-                  <AnalysisUsesHover key={item.id} item={item} sources={analysisSources} hasProject={hasProject}>
+                  <AnalysisUsesHover key={item.id} item={item} sources={analysisSources} hasProject={hasProject} estimateSec={runEstimates[item.id] || 0}>
                     <button type="button" className={`flex w-full items-center gap-1 truncate px-1 py-0.5 text-left text-xs leading-tight hover:bg-accent ${primary ? 'bg-accent text-foreground' : selected ? 'bg-muted/60 text-foreground' : 'text-foreground'}`} onClick={() => setAnalysis(item.id)}>
                       {selected ? <Check className="h-3 w-3 shrink-0 text-primary"/> : <span className="inline-block h-3 w-3 shrink-0"/>}
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>

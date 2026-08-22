@@ -364,6 +364,14 @@ func (a *App) ListAnalysisCatalog() []store.AnalysisGroup {
 	return store.AnalysisCatalog()
 }
 
+func (a *App) ListAnalysisRunEstimates() (map[string]int, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListAnalysisRunEstimates(), nil
+}
+
 func (a *App) GetAnalysis(id string) (store.AnalysisDetail, error) {
 	got, ok := store.GetAnalysisDetail(id)
 	if !ok {

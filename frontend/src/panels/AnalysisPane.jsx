@@ -8,6 +8,7 @@ import { MarkdownReport } from '@/editor/MarkdownReport';
 import { StickyChapterDialog } from '@/editor/StickyChapterDialog';
 import { VisualCompareView } from '@/editor/VisualCompareView';
 import { ReportSearchBar, useReportSearch } from '@/editor/ReportSearch';
+import { formatElapsed } from '@/lib/utils';
 
 function usesAI(detail) {
     return !!(detail?.uses_ai ?? detail?.usesAI);
@@ -55,15 +56,6 @@ function progressLabel(status, step, stepTotal, message) {
     if (status === 'running')
         return 'Running…';
     return 'Running…';
-}
-
-function formatElapsed(ms) {
-    const sec = Math.max(0, Math.floor(ms / 1000));
-    if (sec < 60)
-        return `${sec}s`;
-    const m = Math.floor(sec / 60);
-    const r = sec % 60;
-    return `${m}m ${String(r).padStart(2, '0')}s`;
 }
 
 function sleep(ms) {

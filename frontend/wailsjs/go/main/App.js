@@ -230,6 +230,10 @@ export function ListAnalysisReports() {
   return window['go']['main']['App']['ListAnalysisReports']();
 }
 
+export function ListAnalysisRunEstimates() {
+  return window['go']['main']['App']['ListAnalysisRunEstimates']();
+}
+
 export function ListChapters(arg1) {
   return window['go']['main']['App']['ListChapters'](arg1);
 }
