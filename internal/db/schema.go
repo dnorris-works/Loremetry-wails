@@ -146,7 +146,13 @@ CREATE TABLE analysis_catalog (
     uses_ai     INTEGER NOT NULL DEFAULT 0,
     uses_merge  INTEGER NOT NULL DEFAULT 0,
     ai_profile  TEXT NOT NULL DEFAULT 'single',
-    sort_order  INTEGER NOT NULL DEFAULT 0
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    chapter_instruction TEXT NOT NULL DEFAULT '',
+    chapter_headings    TEXT NOT NULL DEFAULT '[]',
+    final_instruction   TEXT NOT NULL DEFAULT '',
+    source_injection    TEXT NOT NULL DEFAULT 'selective',
+    local_runner        TEXT NOT NULL DEFAULT '',
+    local_config        TEXT NOT NULL DEFAULT '{}'
 );
 
 -- Group: KDP / Wide

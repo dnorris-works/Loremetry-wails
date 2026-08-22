@@ -1624,3 +1624,10 @@ func (a *App) AdminExecSQL(query string) (store.AdminSQLResult, error) {
 	}
 	return s.AdminExecSQL(query)
 }
+
+func (a *App) UpdateAnalysisCatalog(in store.CatalogUpdateInput) (store.AnalysisDetail, error) {
+	if _, err := a.ready(); err != nil {
+		return store.AnalysisDetail{}, err
+	}
+	return store.UpdateAnalysisCatalog(in)
+}

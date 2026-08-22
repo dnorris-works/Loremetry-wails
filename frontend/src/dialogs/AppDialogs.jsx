@@ -117,6 +117,127 @@ function FolderChecks({ title, names, hiddenNames, onToggle }) {
     </div>);
 }
 export function AdminDialog({ open, onOpenChange }) {
+    const [tab, setTab] = useState('catalog');
+    return (<Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogTitle>Admin</DialogTitle>
+        <div className="mt-2 flex gap-2">
+          <Button size="sm" variant={tab === 'catalog' ? 'default' : 'outline'} onClick={() => setTab('catalog')}>Catalog</Button>
+          <Button size="sm" variant={tab === 'sql' ? 'default' : 'outline'} onClick={() => setTab('sql')}>SQL</Button>
+        </div>
+        {tab === 'catalog' ? <CatalogEditor/> : <AdminSQLPanel/>}
+      </DialogContent>
+    </Dialog>);
+}
+function CatalogEditor() {
+    const [items, setItems] = useState([]);
+    const [selectedId, setSelectedId] = useState('');
+    const [form, setForm] = useState(null);
+    const [error, setError] = useState('');
+    const [saved, setSaved] = useState('');
+    useEffect(() => {
+        void api.listAnalysisCatalog().then((groups) => {
+            const flat = [];
+            for (const g of groups || []) {
+                for (const it of g.items || []) {
+                    flat.push({ ...it, group: g.label });
+                }
+            }
+            setItems(flat);
+        });
+    }, []);
+    useEffect(() => {
+        if (!selectedId) {
+            setForm(null);
+            return;
+        }
+        setError('');
+        setSaved('');
+        void api.getAnalysis(selectedId).then((d) => {
+            setForm({
+                id: d.id,
+                label: d.label || '',
+                description: d.description || '',
+                usage: d.usage || '',
+                needs: (d.needs || []).join(', '),
+                depends_on: (d.depends_on || []).join(', '),
+                uses_ai: !!d.uses_ai,
+                uses_merge: !!d.uses_merge,
+                ai_profile: d.ai_profile || 'single',
+                chapter_instruction: d.chapter_instruction || '',
+                chapter_headings: (d.chapter_headings || []).join(', '),
+                final_instruction: d.final_instruction || '',
+                source_injection: d.source_injection || 'selective',
+                local_runner: d.local_runner || '',
+                local_config: d.local_config || '{}',
+            });
+        }).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    }, [selectedId]);
+    function patch(key, value) {
+        setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+    }
+    async function save() {
+        if (!form)
+            return;
+        setError('');
+        setSaved('');
+        const splitList = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+        try {
+            await api.updateAnalysisCatalog({
+                id: form.id,
+                label: form.label,
+                description: form.description,
+                usage: form.usage,
+                needs: splitList(form.needs),
+                depends_on: splitList(form.depends_on),
+                uses_ai: form.uses_ai,
+                uses_merge: form.uses_merge,
+                ai_profile: form.ai_profile,
+                chapter_instruction: form.chapter_instruction,
+                chapter_headings: splitList(form.chapter_headings),
+                final_instruction: form.final_instruction,
+                source_injection: form.source_injection,
+                local_runner: form.local_runner,
+                local_config: form.local_config,
+            });
+            setSaved('Saved.');
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : String(e));
+        }
+    }
+    return (<div className="mt-3 space-y-3">
+      <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+        <option value="">Select analysis…</option>
+        {items.map((it) => (<option key={it.id} value={it.id}>{it.group} — {it.label} ({it.id})</option>))}
+      </select>
+      {form && (<>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="text-xs">Label<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.label} onChange={(e) => patch('label', e.target.value)}/></label>
+            <label className="text-xs">AI profile<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.ai_profile} onChange={(e) => patch('ai_profile', e.target.value)}/></label>
+            <label className="text-xs sm:col-span-2">Needs (comma-separated)<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.needs} onChange={(e) => patch('needs', e.target.value)}/></label>
+            <label className="text-xs sm:col-span-2">Depends on<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.depends_on} onChange={(e) => patch('depends_on', e.target.value)}/></label>
+            <label className="text-xs">Source injection<select className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.source_injection} onChange={(e) => patch('source_injection', e.target.value)}>
+                <option value="selective">selective</option>
+                <option value="all">all</option>
+              </select></label>
+            <label className="text-xs">Local runner<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.local_runner} onChange={(e) => patch('local_runner', e.target.value)}/></label>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.uses_ai} onChange={(e) => patch('uses_ai', e.target.checked)}/>Uses AI</label>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.uses_merge} onChange={(e) => patch('uses_merge', e.target.checked)}/>Uses merge</label>
+          </div>
+          <label className="block text-xs">Description<textarea className="mt-1 h-16 w-full rounded-md border border-input bg-background p-2 text-sm" value={form.description} onChange={(e) => patch('description', e.target.value)}/></label>
+          <label className="block text-xs">Usage<textarea className="mt-1 h-16 w-full rounded-md border border-input bg-background p-2 text-sm" value={form.usage} onChange={(e) => patch('usage', e.target.value)}/></label>
+          <label className="block text-xs">Chapter instruction<textarea className="mt-1 h-20 w-full rounded-md border border-input bg-background p-2 text-xs font-mono" value={form.chapter_instruction} onChange={(e) => patch('chapter_instruction', e.target.value)}/></label>
+          <label className="block text-xs">Chapter headings (comma-separated)<input className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm" value={form.chapter_headings} onChange={(e) => patch('chapter_headings', e.target.value)}/></label>
+          <label className="block text-xs">Final instruction<textarea className="mt-1 h-20 w-full rounded-md border border-input bg-background p-2 text-xs font-mono" value={form.final_instruction} onChange={(e) => patch('final_instruction', e.target.value)}/></label>
+          <label className="block text-xs">Local config (JSON)<textarea className="mt-1 h-20 w-full rounded-md border border-input bg-background p-2 text-xs font-mono" value={form.local_config} onChange={(e) => patch('local_config', e.target.value)}/></label>
+          <Button size="sm" onClick={() => void save()}>Save catalog row</Button>
+        </>)}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {saved && <p className="text-sm text-muted-foreground">{saved}</p>}
+    </div>);
+}
+function AdminSQLPanel() {
     const [tables, setTables] = useState([]);
     const [table, setTable] = useState('');
     const [columns, setColumns] = useState([]);
@@ -124,10 +245,8 @@ export function AdminDialog({ open, onOpenChange }) {
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
     useEffect(() => {
-        if (!open)
-            return;
         void api.adminListTables().then((d) => setTables(d.tables || []));
-    }, [open]);
+    }, []);
     useEffect(() => {
         if (!table) {
             setColumns([]);
@@ -146,10 +265,7 @@ export function AdminDialog({ open, onOpenChange }) {
             setError(e instanceof Error ? e.message : String(e));
         }
     }
-    return (<Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogTitle>Admin</DialogTitle>
-        <div className="mt-3 space-y-3">
+    return (<div className="mt-3 space-y-3">
           <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={table} onChange={(e) => setTable(e.target.value)}>
             <option value="">Select table…</option>
             {tables.map((t) => (<option key={t} value={t}>
@@ -197,7 +313,5 @@ export function AdminDialog({ open, onOpenChange }) {
                 {(result.rows || []).length} row(s)
               </p>
             </div>)}
-        </div>
-      </DialogContent>
-    </Dialog>);
+    </div>);
 }

@@ -38,10 +38,22 @@ func StepPrompt(step, analysisID string, sources []Source, prior []string) strin
 		b.WriteString(" Analysis: ")
 		b.WriteString(analysisID)
 		b.WriteString(FormatChapterHeadings(spec.RequiredHeadings))
+		if hasStoryElementSource(sources) {
+			if rules := store.AnalysisSourceRules(); rules != "" {
+				b.WriteString("\n\n")
+				b.WriteString(rules)
+			}
+		}
 	default:
 		b.WriteString(spec.FinalInstruction)
 		b.WriteString(" Analysis: ")
 		b.WriteString(analysisID)
+		if hasStoryElementSource(sources) {
+			if rules := store.AnalysisSourceRules(); rules != "" {
+				b.WriteString("\n\n")
+				b.WriteString(rules)
+			}
+		}
 	}
 	b.WriteString("\n\n")
 	for _, s := range sources {

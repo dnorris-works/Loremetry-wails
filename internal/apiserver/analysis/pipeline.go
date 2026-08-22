@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"loremetry/internal/apiserver/models"
+	"loremetry/internal/store"
 )
 
 const chapterAnalyzeMaxChars = 12000
@@ -194,6 +195,7 @@ func (r *Runner) runByChapter(ctx context.Context, analysisID string, sources []
 	sys := SystemPrompt(analysisID)
 	chapters, other := manuscriptChapters(sources)
 	other = truncateSources(other, 8000)
+	selective := storeUsesSelectiveInjection(analysisID)
 	if len(chapters) == 0 {
 		r.progress(1, 1, "Writing report…")
 		user := StepPrompt("final", analysisID, truncateSources(other, 12000), nil)
@@ -208,8 +210,12 @@ func (r *Runner) runByChapter(ctx context.Context, analysisID string, sources []
 			label = fmt.Sprintf("Analyzing %s (%d of %d)…", name, i+1, len(chapters))
 		}
 		r.progress(i+1, total, label)
-		chapterSources := make([]Source, 0, 1+len(other))
-		chapterSources = append(chapterSources, other...)
+		chapterOther := other
+		if selective {
+			chapterOther = FilterStoryElementsForChapter(other, ch)
+		}
+		chapterSources := make([]Source, 0, 1+len(chapterOther))
+		chapterSources = append(chapterSources, chapterOther...)
 		chapterSources = append(chapterSources, ch)
 		user := StepPrompt("analyze_chapter", analysisID, chapterSources, nil)
 		out, _, err := r.Gateway.Complete(ctx, models.TierFast, sys, user)
@@ -223,6 +229,14 @@ func (r *Runner) runByChapter(ctx context.Context, analysisID string, sources []
 	user := StepPrompt("final", analysisID, other, clipPrior(findings, maxPriorChars))
 	body, _, err := r.Gateway.Complete(ctx, models.TierStrong, sys, user)
 	return body, err
+}
+
+func storeUsesSelectiveInjection(analysisID string) bool {
+	detail, ok := store.GetAnalysisDetail(analysisID)
+	if !ok {
+		return false
+	}
+	return store.UsesSelectiveSourceInjection(detail)
 }
 
 func truncateSources(sources []Source, maxChars int) []Source {

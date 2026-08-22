@@ -44,4 +44,19 @@ func TestAnalysisCatalog(t *testing.T) {
 	if len(summary.Needs) != 2 || summary.Needs[0] != "manuscript" || summary.Needs[1] != "characters" {
 		t.Fatalf("chapter_summaries needs %+v", summary.Needs)
 	}
+	if summary.ChapterInstruction == "" || len(summary.ChapterHeadings) != 4 {
+		t.Fatalf("chapter_summaries prompts %+v", summary)
+	}
+	pov, ok := GetAnalysisDetail("pov_discipline")
+	if !ok || len(pov.Needs) != 2 || pov.Needs[1] != "characters" {
+		t.Fatalf("pov_discipline needs %+v", pov.Needs)
+	}
+	throughline, ok := GetAnalysisDetail("thematic_throughline")
+	if !ok || len(throughline.Needs) != 2 || throughline.Needs[1] != "themes" {
+		t.Fatalf("thematic_throughline needs %+v", throughline.Needs)
+	}
+	blurb, ok := GetAnalysisDetail("blurb_builder")
+	if !ok || len(blurb.Needs) != 4 {
+		t.Fatalf("blurb_builder needs %+v", blurb.Needs)
+	}
 }

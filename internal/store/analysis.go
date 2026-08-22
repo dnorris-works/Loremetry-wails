@@ -39,14 +39,22 @@ type AnalysisItem struct {
 }
 
 type AnalysisDetail struct {
-	ID          string   `json:"id"`
-	Label       string   `json:"label"`
-	Group       string   `json:"group"`
-	Description string   `json:"description"`
-	Needs       []string `json:"needs"`
-	DependsOn   []string `json:"depends_on"`
-	UsesAI      bool     `json:"uses_ai"`
-	UsesMerge   bool     `json:"uses_merge"`
+	ID                 string   `json:"id"`
+	Label              string   `json:"label"`
+	Group              string   `json:"group"`
+	Description        string   `json:"description"`
+	Usage              string   `json:"usage"`
+	Needs              []string `json:"needs"`
+	DependsOn          []string `json:"depends_on"`
+	UsesAI             bool     `json:"uses_ai"`
+	UsesMerge          bool     `json:"uses_merge"`
+	AIProfile          string   `json:"ai_profile"`
+	ChapterInstruction string   `json:"chapter_instruction"`
+	ChapterHeadings    []string `json:"chapter_headings"`
+	FinalInstruction   string   `json:"final_instruction"`
+	SourceInjection    string   `json:"source_injection"`
+	LocalRunner        string   `json:"local_runner"`
+	LocalConfig        string   `json:"local_config"`
 }
 
 type AnalysisGroup struct {
@@ -118,13 +126,17 @@ func GetAnalysisDetail(id string) (AnalysisDetail, bool) {
 	}
 	id = strings.TrimSpace(id)
 	var detail AnalysisDetail
-	var needsJSON, depsJSON string
+	var needsJSON, depsJSON, headingsJSON string
 	var usesAI, usesMerge int
 	err := catalogDB.QueryRow(`
-		SELECT id, group_label, label, description, needs, depends_on, uses_ai, uses_merge
+		SELECT id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile,
+			chapter_instruction, chapter_headings, final_instruction,
+			source_injection, local_runner, local_config
 		FROM analysis_catalog WHERE id = ?`, id).Scan(
-		&detail.ID, &detail.Group, &detail.Label, &detail.Description,
-		&needsJSON, &depsJSON, &usesAI, &usesMerge,
+		&detail.ID, &detail.Group, &detail.Label, &detail.Description, &detail.Usage,
+		&needsJSON, &depsJSON, &usesAI, &usesMerge, &detail.AIProfile,
+		&detail.ChapterInstruction, &headingsJSON, &detail.FinalInstruction,
+		&detail.SourceInjection, &detail.LocalRunner, &detail.LocalConfig,
 	)
 	if err != nil {
 		return AnalysisDetail{}, false
@@ -134,6 +146,9 @@ func GetAnalysisDetail(id string) (AnalysisDetail, bool) {
 	}
 	if json.Unmarshal([]byte(depsJSON), &detail.DependsOn) != nil || detail.DependsOn == nil {
 		detail.DependsOn = []string{}
+	}
+	if json.Unmarshal([]byte(headingsJSON), &detail.ChapterHeadings) != nil || detail.ChapterHeadings == nil {
+		detail.ChapterHeadings = []string{}
 	}
 	detail.UsesAI = usesAI != 0
 	detail.UsesMerge = usesMerge != 0
@@ -174,4 +189,36 @@ func AnalysisRunQueue(id string) []string {
 	out = append(out, deps...)
 	out = append(out, id)
 	return out
+}
+
+// AnalysisSourceRules returns the global fidelity line appended when story-element sources are attached.
+func AnalysisSourceRules() string {
+	if catalogDB == nil {
+		return ""
+	}
+	var value string
+	err := catalogDB.QueryRow(`SELECT value FROM app_settings WHERE key = 'analysis_source_rules'`).Scan(&value)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(value)
+}
+
+// UsesSelectiveSourceInjection reports whether by-chapter AI calls should attach
+// only story-element profiles relevant to each chapter.
+func UsesSelectiveSourceInjection(d AnalysisDetail) bool {
+	switch strings.TrimSpace(d.SourceInjection) {
+	case "all":
+		return false
+	case "selective":
+		return true
+	default:
+		for _, need := range d.Needs {
+			switch need {
+			case "characters", "locations", "themes":
+				return true
+			}
+		}
+		return false
+	}
 }

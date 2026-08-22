@@ -31,7 +31,7 @@ func TestStickySpansAndContextHighlights(t *testing.T) {
 	normal := "Dragons roared above the mountain peaks."
 	text := sticky + " " + normal
 
-	spans, stickyCount, sentCount, _ := stickySpansForChapter(text, fictionCharsPerLine)
+	spans, stickyCount, sentCount, _ := stickySpansForChapter(text, fictionCharsPerLine, 0.45)
 	if sentCount < 2 {
 		t.Fatalf("sentences %d", sentCount)
 	}
@@ -81,7 +81,7 @@ func TestRunStickySentencesDataJSON(t *testing.T) {
 		Rel:  "01_Manuscript/01_Chapters/01.md",
 		Name: "01.md",
 		Text: sticky + " Dragons roared.",
-	}})
+	}}, LocalConfig{})
 	if !strings.Contains(md, "| View |") {
 		t.Fatalf("missing View column: %s", md)
 	}

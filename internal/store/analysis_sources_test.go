@@ -26,6 +26,9 @@ func TestMatchAnalysisSourcesBook(t *testing.T) {
 	if !got.Role("characters").Present {
 		t.Fatal("characters folder")
 	}
+	if !got.Role("themes").Present {
+		t.Fatal("themes folder")
+	}
 	if !got.Role("blurb").Present {
 		t.Fatal("blurb file")
 	}
@@ -49,6 +52,9 @@ func TestMatchAnalysisSourcesSeries(t *testing.T) {
 	}
 	if !got.Role("characters").Present {
 		t.Fatal("series characters")
+	}
+	if !got.Role("themes").Present {
+		t.Fatal("series themes")
 	}
 	bible := got.Role("bible")
 	found := false

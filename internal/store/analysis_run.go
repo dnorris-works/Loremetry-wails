@@ -37,51 +37,15 @@ func RunLocalAnalysis(id, projectPath string) (AnalysisRunResult, error) {
 	}
 	blobs := CollectNeededText(root, detail.Needs)
 	text := joinRoleText(blobs, "manuscript")
-	var content, original, proposed, dataJSON string
-	switch id {
-	case "print_production":
-		content = runPrintProduction(text)
-		dataJSON = fmt.Sprintf(`{"words":%d}`, len(strings.Fields(text)))
-	case "line_polish":
-		content = runLinePolish(text)
-		dataJSON = `{"kind":"line_polish"}`
-	case "vellum_prep":
-		content = runVellumPrep(blobs)
-		dataJSON = `{"kind":"vellum_prep"}`
-	case "zeigarnik_analysis":
-		original, proposed, dataJSON = runZeigarnik(blobs)
-	case "readability_score":
-		content = runReadabilityScore(blobs)
-		dataJSON = `{"kind":"readability_score"}`
-	case "sentence_length_variation":
-		content = runSentenceLengthVariation(blobs)
-		dataJSON = `{"kind":"sentence_length_variation"}`
-	case "chapter_balance":
-		content = runChapterBalance(blobs)
-		dataJSON = `{"kind":"chapter_balance"}`
-	case "dialogue_ratio":
-		content = runDialogueRatio(blobs)
-		dataJSON = `{"kind":"dialogue_ratio"}`
-	case "dialogue_tag_audit":
-		content = runDialogueTagAudit(blobs)
-		dataJSON = `{"kind":"dialogue_tag_audit"}`
-	case "passive_voice":
-		content = runPassiveVoice(blobs)
-		dataJSON = `{"kind":"passive_voice"}`
-	case "sticky_sentences":
-		content, dataJSON = runStickySentences(blobs)
-	case "repeated_phrases":
-		content = runRepeatedPhrases(blobs)
-		dataJSON = `{"kind":"repeated_phrases"}`
-	case "paragraph_length":
-		content = runParagraphLength(blobs)
-		dataJSON = `{"kind":"paragraph_length"}`
-	case "opening_closing":
-		content = runOpeningClosing(blobs)
-		dataJSON = `{"kind":"opening_closing"}`
-	default:
-		return AnalysisRunResult{}, fmt.Errorf("this analysis cannot run yet")
+	outcome, err := RunLocalFromCatalog(detail, blobs)
+	if err != nil {
+		return AnalysisRunResult{}, err
 	}
+	content := outcome.Content
+	original := outcome.Original
+	proposed := outcome.Proposed
+	dataJSON := outcome.DataJSON
+	_ = text
 	md := ""
 	if !detail.UsesMerge {
 		md = FormatReportBody(detail.Label, detail.ID, content)
@@ -112,32 +76,34 @@ func joinRoleText(blobs []RoleText, role string) string {
 	return b.String()
 }
 
-func runPrintProduction(text string) string {
+func runPrintProduction(text string, wordsPerPage int) string {
 	words := len(strings.Fields(text))
 	chars := len([]rune(text))
-	pages6x9 := words / 250
+	if wordsPerPage <= 0 {
+		wordsPerPage = 250
+	}
+	pages6x9 := words / wordsPerPage
 	if pages6x9 < 1 && words > 0 {
 		pages6x9 = 1
 	}
 	spine := float64(pages6x9) * 0.002252
 	return fmt.Sprintf(`- Word count: %d
 - Characters: %d
-- Approx. 6×9 pages (250 wpp): %d
+- Approx. 6×9 pages (%d wpp): %d
 - Approx. cream spine (in): %.3f
 
 Check KDP print specs for trim, bleed, and cover template before upload.
-`, words, chars, pages6x9, spine)
+`, words, chars, wordsPerPage, pages6x9, spine)
 }
 
-var (
-	filterWords = regexp.MustCompile(`(?i)\b(just|really|very|suddenly|somewhat|actually|basically|literally|quite|rather)\b`)
-)
+func defaultFilterWords() []string {
+	return []string{"just", "really", "very", "suddenly", "somewhat", "actually", "basically", "literally", "quite", "rather"}
+}
 
-const echoWindow = 12
-
-func runLinePolish(text string) string {
+func runLinePolish(text string, cfg LocalConfig) string {
 	words := strings.Fields(text)
-	filterHits := filterWords.FindAllString(text, 80)
+	filterRE := filterWordsRE(cfg.FilterWords)
+	filterHits := filterRE.FindAllString(text, 80)
 	lyHits := 0
 	for _, w := range words {
 		clean := strings.Trim(strings.ToLower(w), ".,;:!?\"'")
@@ -145,7 +111,7 @@ func runLinePolish(text string) string {
 			lyHits++
 		}
 	}
-	echoes := findEchoes(words)
+	echoes := findEchoes(words, cfg.EchoWindow)
 	var b strings.Builder
 	fmt.Fprintf(&b, "- Words: %d\n- Filter-word hits (sample): %d\n- -ly adverbs: %d\n- Nearby echoes: %d\n\n",
 		len(words), len(filterHits), lyHits, len(echoes))
@@ -173,7 +139,21 @@ func runLinePolish(text string) string {
 	return b.String()
 }
 
-func findEchoes(words []string) []string {
+func filterWordsRE(words []string) *regexp.Regexp {
+	if len(words) == 0 {
+		words = defaultFilterWords()
+	}
+	parts := make([]string, len(words))
+	for i, w := range words {
+		parts[i] = regexp.QuoteMeta(w)
+	}
+	return regexp.MustCompile(`(?i)\b(` + strings.Join(parts, "|") + `)\b`)
+}
+
+func findEchoes(words []string, window int) []string {
+	if window <= 0 {
+		window = 12
+	}
 	var out []string
 	norm := make([]string, len(words))
 	for i, w := range words {
@@ -185,7 +165,7 @@ func findEchoes(words []string) []string {
 		if len(w) < 5 {
 			continue
 		}
-		end := i + echoWindow
+		end := i + window
 		if end > len(norm) {
 			end = len(norm)
 		}
@@ -216,7 +196,18 @@ func runVellumPrep(blobs []RoleText) string {
 
 var openLoopCue = regexp.MustCompile(`(?i)\b(would|until|tomorrow|later|unless)\b`)
 
-func chapterEndingOpenLoop(text string) (last string, open bool) {
+func openLoopCueRE(cfg LocalConfig) *regexp.Regexp {
+	if len(cfg.OpenLoopCues) == 0 {
+		return openLoopCue
+	}
+	parts := make([]string, len(cfg.OpenLoopCues))
+	for i, c := range cfg.OpenLoopCues {
+		parts[i] = regexp.QuoteMeta(c)
+	}
+	return regexp.MustCompile(`(?i)\b(` + strings.Join(parts, "|") + `)\b`)
+}
+
+func chapterEndingOpenLoop(text string, cue *regexp.Regexp) (last string, open bool) {
 	end := strings.TrimSpace(text)
 	if end == "" {
 		return "", false
@@ -228,12 +219,13 @@ func chapterEndingOpenLoop(text string) (last string, open bool) {
 	lines := strings.Split(strings.TrimSpace(sample), "\n")
 	last = strings.TrimSpace(lines[len(lines)-1])
 	open = strings.Contains(last, "?") || strings.HasSuffix(last, "...") || strings.HasSuffix(last, "…") ||
-		openLoopCue.MatchString(last)
+		cue.MatchString(last)
 	return last, open
 }
 
 // runZeigarnik builds manuscript original/proposed for Compare only (no separate report body).
-func runZeigarnik(blobs []RoleText) (original, proposed, dataJSON string) {
+func runZeigarnik(blobs []RoleText, cfg LocalConfig) (original, proposed, dataJSON string) {
+	cue := openLoopCueRE(cfg)
 	var orig, prop strings.Builder
 	type loopHit struct {
 		File   string `json:"file"`
@@ -250,7 +242,7 @@ func runZeigarnik(blobs []RoleText) (original, proposed, dataJSON string) {
 		chapter := fmt.Sprintf("# %s\n\n%s\n\n", title, text)
 		orig.WriteString(chapter)
 
-		last, open := chapterEndingOpenLoop(text)
+		last, open := chapterEndingOpenLoop(text, cue)
 		if open {
 			loops = append(loops, loopHit{File: blob.Name, Title: title, Ending: last})
 			fmt.Fprintf(&prop, "# %s\n\n%s\n\n> **Open loop** — possible unresolved thread at chapter end.\n\n", title, text)

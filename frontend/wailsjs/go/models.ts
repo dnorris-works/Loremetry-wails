@@ -214,10 +214,18 @@ export namespace store {
 	    label: string;
 	    group: string;
 	    description: string;
+	    usage: string;
 	    needs: string[];
 	    depends_on: string[];
 	    uses_ai: boolean;
 	    uses_merge: boolean;
+	    ai_profile: string;
+	    chapter_instruction: string;
+	    chapter_headings: string[];
+	    final_instruction: string;
+	    source_injection: string;
+	    local_runner: string;
+	    local_config: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalysisDetail(source);
@@ -229,10 +237,18 @@ export namespace store {
 	        this.label = source["label"];
 	        this.group = source["group"];
 	        this.description = source["description"];
+	        this.usage = source["usage"];
 	        this.needs = source["needs"];
 	        this.depends_on = source["depends_on"];
 	        this.uses_ai = source["uses_ai"];
 	        this.uses_merge = source["uses_merge"];
+	        this.ai_profile = source["ai_profile"];
+	        this.chapter_instruction = source["chapter_instruction"];
+	        this.chapter_headings = source["chapter_headings"];
+	        this.final_instruction = source["final_instruction"];
+	        this.source_injection = source["source_injection"];
+	        this.local_runner = source["local_runner"];
+	        this.local_config = source["local_config"];
 	    }
 	}
 	export class AnalysisFile {
@@ -504,6 +520,46 @@ export namespace store {
 	        this.series_id = source["series_id"];
 	        this.file_name = source["file_name"];
 	        this.text_content = source["text_content"];
+	    }
+	}
+	export class CatalogUpdateInput {
+	    id: string;
+	    label: string;
+	    description: string;
+	    usage: string;
+	    needs: string[];
+	    depends_on: string[];
+	    uses_ai: boolean;
+	    uses_merge: boolean;
+	    ai_profile: string;
+	    chapter_instruction: string;
+	    chapter_headings: string[];
+	    final_instruction: string;
+	    source_injection: string;
+	    local_runner: string;
+	    local_config: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CatalogUpdateInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.description = source["description"];
+	        this.usage = source["usage"];
+	        this.needs = source["needs"];
+	        this.depends_on = source["depends_on"];
+	        this.uses_ai = source["uses_ai"];
+	        this.uses_merge = source["uses_merge"];
+	        this.ai_profile = source["ai_profile"];
+	        this.chapter_instruction = source["chapter_instruction"];
+	        this.chapter_headings = source["chapter_headings"];
+	        this.final_instruction = source["final_instruction"];
+	        this.source_injection = source["source_injection"];
+	        this.local_runner = source["local_runner"];
+	        this.local_config = source["local_config"];
 	    }
 	}
 	export class Chapter {

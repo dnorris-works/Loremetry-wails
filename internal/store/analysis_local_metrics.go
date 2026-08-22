@@ -1195,10 +1195,13 @@ func sentenceGlueRatio(s string) (ratio float64, ok bool) {
 	return float64(glueCount) / float64(len(words)), true
 }
 
-func stickySpansForChapter(text string, width int) (spans []StickyLineSpan, stickyCount, sentCount int, top []struct {
+func stickySpansForChapter(text string, width int, stickyThreshold float64) (spans []StickyLineSpan, stickyCount, sentCount int, top []struct {
 	text  string
 	ratio float64
 }) {
+	if stickyThreshold <= 0 {
+		stickyThreshold = 0.45
+	}
 	lines := wrapFictionLines(text, width)
 	sents := splitSentences(text)
 	sentCount = len(sents)
@@ -1219,7 +1222,7 @@ func stickySpansForChapter(text string, width int) (spans []StickyLineSpan, stic
 			text  string
 			ratio float64
 		}{text: s, ratio: ratio})
-		if ratio > 0.45 {
+		if ratio > stickyThreshold {
 			stickyCount++
 			ls, le := lineRangeForOffsets(lines, start, end)
 			spans = append(spans, StickyLineSpan{LineStart: ls, LineEnd: le})
@@ -1271,7 +1274,7 @@ func BuildStickyChapterContext(projectPath, chapterRel string) (StickyChapterCon
 	}
 
 	text = strings.TrimSpace(text)
-	spans, stickyCount, _, _ := stickySpansForChapter(text, fictionCharsPerLine)
+	spans, stickyCount, _, _ := stickySpansForChapter(text, fictionCharsPerLine, 0.45)
 	lines := wrapFictionLines(text, fictionCharsPerLine)
 	out := make([]StickyLineView, 0, len(lines))
 	for i, ln := range lines {
@@ -1294,7 +1297,11 @@ func BuildStickyChapterContext(projectPath, chapterRel string) (StickyChapterCon
 // runStickySentences reports sentences overloaded with function words (glue words).
 // A sentence is "sticky" when >45% of its words are glue words. Returns markdown
 // and a JSON payload with per-chapter sticky line spans for the View dialog.
-func runStickySentences(blobs []RoleText) (markdown string, dataJSON string) {
+func runStickySentences(blobs []RoleText, cfg LocalConfig) (markdown string, dataJSON string) {
+	stickyThreshold := float64(cfg.GlueThreshold) / 100
+	if stickyThreshold <= 0 {
+		stickyThreshold = 0.45
+	}
 	type stickySentence struct {
 		text    string
 		chapter string
@@ -1315,7 +1322,7 @@ func runStickySentences(blobs []RoleText) (markdown string, dataJSON string) {
 		}
 
 		chapterName := strings.TrimSuffix(blob.Name, filepath.Ext(blob.Name))
-		spans, stickyCount, sentCount, top := stickySpansForChapter(text, fictionCharsPerLine)
+		spans, stickyCount, sentCount, top := stickySpansForChapter(text, fictionCharsPerLine, stickyThreshold)
 		if sentCount == 0 {
 			continue
 		}
@@ -1379,7 +1386,7 @@ func runStickySentences(blobs []RoleText) (markdown string, dataJSON string) {
 	fmt.Fprintf(&b, "- **Sticky sentences:** %d\n", totalSticky)
 	fmt.Fprintf(&b, "- **Sticky percentage:** %.1f%%\n", overallPct)
 	fmt.Fprintf(&b, "- **Chapters analyzed:** %d\n", len(chapterData))
-	b.WriteString("- **Sticky threshold:** >45% glue words\n")
+	fmt.Fprintf(&b, "- **Sticky threshold:** >%.0f%% glue words\n", stickyThreshold*100)
 	fmt.Fprintf(&b, "- **View line length:** %d characters (~5.5×8 fiction)\n", fictionCharsPerLine)
 	b.WriteString("\n")
 

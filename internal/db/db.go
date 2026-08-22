@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 18
+const schemaVersion = 20
 
 func DefaultPath() (string, error) {
 	configDir, err := os.UserConfigDir()
@@ -55,6 +55,15 @@ func migrate(conn *sql.DB) error {
 	}
 	if _, err := conn.Exec(schemaSQL); err != nil {
 		return fmt.Errorf("apply schema: %w", err)
+	}
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN chapter_instruction TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN chapter_headings TEXT NOT NULL DEFAULT '[]'`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN final_instruction TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN source_injection TEXT NOT NULL DEFAULT 'selective'`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN local_runner TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE analysis_catalog ADD COLUMN local_config TEXT NOT NULL DEFAULT '{}'`)
+	if err := seedCatalogPrompts(conn); err != nil {
+		return fmt.Errorf("seed catalog prompts: %w", err)
 	}
 	_, _ = conn.Exec(`ALTER TABLE stories ADD COLUMN series_id INTEGER`)
 	_, _ = conn.Exec(`ALTER TABLE stories ADD COLUMN series_sort_order INTEGER`)

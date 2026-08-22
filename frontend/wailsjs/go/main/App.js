@@ -454,6 +454,10 @@ export function UpdateAct(arg1, arg2) {
   return window['go']['main']['App']['UpdateAct'](arg1, arg2);
 }
 
+export function UpdateAnalysisCatalog(arg1) {
+  return window['go']['main']['App']['UpdateAnalysisCatalog'](arg1);
+}
+
 export function UpdateChapter(arg1, arg2) {
   return window['go']['main']['App']['UpdateChapter'](arg1, arg2);
 }

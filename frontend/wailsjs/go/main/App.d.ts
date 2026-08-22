@@ -231,6 +231,8 @@ export function ToggleOpenStory(arg1:string):Promise<store.UISession>;
 
 export function UpdateAct(arg1:number,arg2:store.ActInput):Promise<store.UpdatedResult>;
 
+export function UpdateAnalysisCatalog(arg1:store.CatalogUpdateInput):Promise<store.AnalysisDetail>;
+
 export function UpdateChapter(arg1:number,arg2:store.ChapterInput):Promise<store.UpdatedResult>;
 
 export function UpdateCharacter(arg1:number,arg2:store.CharacterInput):Promise<store.UpdatedResult>;

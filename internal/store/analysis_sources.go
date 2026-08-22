@@ -94,6 +94,7 @@ func bookAnalysisRoles() []analysisRoleSpec {
 		{role: "manuscript", rel: "01_Manuscript/01_Chapters"},
 		{role: "characters", rel: "02_Story-Elements/Characters"},
 		{role: "locations", rel: "02_Story-Elements/Locations"},
+		{role: "themes", rel: "02_Story-Elements/Themes"},
 		{role: "bible", rel: "02_Story-Elements/World-Notes"},
 		{role: "plot", rel: "03_Plot"},
 		{role: "continuity", rel: "02_Story-Elements/Continuity-Notes.md", file: true},
@@ -106,6 +107,7 @@ func seriesAnalysisRoles() []analysisRoleSpec {
 		{role: "bible", rel: "00_Series-Bible"},
 		{role: "characters", rel: "00_Series-Bible/Characters"},
 		{role: "locations", rel: "00_Series-Bible/Locations"},
+		{role: "themes", rel: "00_Series-Bible/Premise-and-Themes.md", file: true},
 		{role: "world", rel: "00_Series-Bible/World"},
 	}
 }

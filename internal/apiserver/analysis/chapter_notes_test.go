@@ -1,11 +1,27 @@
 package analysis
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
+
+	appdb "loremetry/internal/db"
+	"loremetry/internal/store"
 )
 
+func ensureChapterNotesCatalog(t *testing.T) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "loremetry-app.db")
+	conn, err := appdb.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	store.SetCatalogDB(conn)
+}
+
 func TestChapterNoteSpecPOV(t *testing.T) {
+	ensureChapterNotesCatalog(t)
 	s := ChapterNoteSpecFor("pov_discipline")
 	want := []string{"POV", "Head-hops", "Info leaks", "Severity"}
 	if len(s.RequiredHeadings) != len(want) {
@@ -25,6 +41,7 @@ func TestChapterNoteSpecPOV(t *testing.T) {
 }
 
 func TestStepPromptAnalyzeChapterIncludesHeadings(t *testing.T) {
+	ensureChapterNotesCatalog(t)
 	user := StepPrompt("analyze_chapter", "pov_discipline", []Source{{Role: "manuscript", Name: "01.md", Text: "Hello"}}, nil)
 	for _, h := range []string{"## POV", "## Head-hops", "## Info leaks", "## Severity"} {
 		if !strings.Contains(user, h) {
@@ -40,6 +57,7 @@ func TestStepPromptAnalyzeChapterIncludesHeadings(t *testing.T) {
 }
 
 func TestStepPromptFinalUsesSpec(t *testing.T) {
+	ensureChapterNotesCatalog(t)
 	user := StepPrompt("final", "show_dont_tell", nil, []string{"### Ch1\n\nnotes"})
 	if !strings.Contains(user, "Show Don't Tell") && !strings.Contains(user, "Show Don") {
 		// Instruction says "Produce a Show Don't Tell report."
@@ -56,6 +74,7 @@ func TestStepPromptFinalUsesSpec(t *testing.T) {
 }
 
 func TestChapterNoteSpecMarketing(t *testing.T) {
+	ensureChapterNotesCatalog(t)
 	s := ChapterNoteSpecFor("genre_analysis")
 	if len(s.RequiredHeadings) < 3 {
 		t.Fatalf("%v", s.RequiredHeadings)

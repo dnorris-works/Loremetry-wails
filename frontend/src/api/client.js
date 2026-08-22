@@ -70,6 +70,7 @@ import {
   AdminQueryTable,
   AdminDeleteRow,
   AdminExecSQL,
+  UpdateAnalysisCatalog,
 } from '../../wailsjs/go/main/App'
 export const api = {
     getSession: () => GetSession(),
@@ -157,4 +158,5 @@ export const api = {
     adminQueryTable: (table, limit, offset) => AdminQueryTable(table, limit, offset),
     adminDeleteRow: (table, id) => AdminDeleteRow(table, id),
     adminExecSQL: (sql) => AdminExecSQL(sql),
+    updateAnalysisCatalog: (input) => UpdateAnalysisCatalog(input),
 };
