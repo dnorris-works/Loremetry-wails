@@ -171,6 +171,9 @@ func scanDirNode(path string) DirNode {
 	if isCharactersFolder(path) {
 		ensureCharacterTypeFolders(path)
 	}
+	if isStoryElementsFolder(path) {
+		ensureStoryElementsFolders(path)
+	}
 	node := DirNode{Name: filepath.Base(path), Path: path, Files: []DirFile{}, Folders: []DirNode{}}
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -218,6 +221,23 @@ func isCharactersFolder(path string) bool {
 func ensureCharacterTypeFolders(path string) {
 	for _, name := range []string{"Main", "Supporting", "Minor"} {
 		_ = os.MkdirAll(filepath.Join(path, name), 0o755)
+	}
+}
+
+func isStoryElementsFolder(path string) bool {
+	name := strings.ToLower(strings.TrimPrefix(filepath.Base(path), "02_"))
+	return name == "story-elements"
+}
+
+func ensureStoryElementsFolders(path string) {
+	themesDir := filepath.Join(path, "Themes")
+	_ = os.MkdirAll(themesDir, 0o755)
+	legacy := filepath.Join(path, "Themes-and-Motifs.md")
+	dest := filepath.Join(themesDir, "Themes-and-Motifs.md")
+	if info, err := os.Stat(legacy); err == nil && info.Mode().IsRegular() {
+		if _, err := os.Stat(dest); os.IsNotExist(err) {
+			_ = os.Rename(legacy, dest)
+		}
 	}
 }
 

@@ -56,9 +56,15 @@
           },
           { "type": "folder", "name": "Locations", "children": [] },
           { "type": "folder", "name": "World-Notes", "children": [] },
+          {
+            "type": "folder",
+            "name": "Themes",
+            "children": [
+              { "type": "file", "name": "Themes-and-Motifs.md" }
+            ]
+          },
           { "type": "file", "name": "Timeline.csv" },
           { "type": "folder", "name": "Relationships", "children": [] },
-          { "type": "file", "name": "Themes-and-Motifs.md" },
           { "type": "file", "name": "Continuity-Notes.md" }
         ]
       },

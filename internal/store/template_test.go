@@ -38,6 +38,9 @@ func TestApplySeriesAndBookTemplates(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(bookRoot, "02_Story-Elements", "Characters", "New-Characters-Introduced.md")); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := os.Stat(filepath.Join(bookRoot, "02_Story-Elements", "Themes", "Themes-and-Motifs.md")); err != nil {
+		t.Fatalf("themes folder: %v", err)
+	}
 	alone, err := ApplyBookTemplate(parent, "Standalone", "", "")
 	if err != nil {
 		t.Fatal(err)

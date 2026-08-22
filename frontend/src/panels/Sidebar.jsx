@@ -11,7 +11,7 @@ import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 import { formatElapsed } from '@/lib/utils';
 import { clearSidebarDrag, hasFiles, setSidebarDrag, sidebarDrag } from '@/lib/sidebar-drag';
 
-const nest = 'ml-[2ch] border-l border-border pl-2';
+const nest = 'ml-[0.5ch] border-l border-border pl-2';
 
 function isCharacterTypeFolder(node) {
     const name = (node?.name || '').toLowerCase();

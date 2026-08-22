@@ -99,3 +99,24 @@ func TestCharacterTypeFolderOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsureStoryElementsThemesFolder(t *testing.T) {
+	root := t.TempDir()
+	story := filepath.Join(root, "02_Story-Elements")
+	if err := os.MkdirAll(story, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(story, "Themes-and-Motifs.md"), []byte("motifs"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	node := scanDirNode(story)
+	if !hasFolder(node, "Themes") {
+		t.Fatalf("missing Themes folder: %+v", node.Folders)
+	}
+	if _, err := os.Stat(filepath.Join(story, "Themes", "Themes-and-Motifs.md")); err != nil {
+		t.Fatalf("legacy file should move into Themes: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(story, "Themes-and-Motifs.md")); !os.IsNotExist(err) {
+		t.Fatal("legacy root file should be gone")
+	}
+}
