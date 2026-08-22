@@ -331,11 +331,25 @@ func (a *App) ReadDiskFileSection(dir string, name string, index int) (store.Fil
 }
 
 func (a *App) WriteDiskFileSection(dir string, name string, index int, text string) (store.DiskFile, error) {
-	return store.WriteDiskFileSection(dir, name, index, text)
+	return withBusy(a, func() (store.DiskFile, error) {
+		out, err := store.WriteDiskFileSection(dir, name, index, text)
+		if err != nil {
+			return store.DiskFile{}, err
+		}
+		a.syncDiskHashesQuiet()
+		return out, nil
+	})
 }
 
 func (a *App) WriteDiskFile(in store.DiskFileWrite) (store.DiskFile, error) {
-	return withBusy(a, func() (store.DiskFile, error) { return store.WriteDiskFile(in) })
+	return withBusy(a, func() (store.DiskFile, error) {
+		out, err := store.WriteDiskFile(in)
+		if err != nil {
+			return store.DiskFile{}, err
+		}
+		a.syncDiskHashesQuiet()
+		return out, nil
+	})
 }
 
 func (a *App) CreateDiskFile(dir string, name string, text string) (store.DiskFile, error) {
@@ -344,7 +358,7 @@ func (a *App) CreateDiskFile(dir string, name string, text string) (store.DiskFi
 		if err != nil {
 			return store.DiskFile{}, err
 		}
-		a.startFolderWatch()
+		a.syncDiskHashesQuiet()
 		return out, nil
 	})
 }
@@ -355,7 +369,7 @@ func (a *App) CreateDiskFiles(dir string, files []store.IncomingFile) (store.Dis
 		if err != nil {
 			return store.DiskFile{}, err
 		}
-		a.startFolderWatch()
+		a.syncDiskHashesQuiet()
 		return out, nil
 	})
 }
@@ -534,7 +548,17 @@ func (a *App) LocalAIStatus() localai.Status {
 	return st
 }
 
-func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, error) {
+func (a *App) ListChapterSummaryChapters(projectPath string) ([]store.ChapterSummaryChapter, error) {
+	s, err := a.ready()
+	if err != nil {
+		return nil, err
+	}
+	return s.ListChapterSummaryChapters(projectPath)
+}
+
+// StartAnalysisJob runs a local AI analysis. For chapter_summaries, chapterRels must
+// list the manuscript-relative chapter paths to include; other analyses ignore it.
+func (a *App) StartAnalysisJob(id string, projectPath string, chapterRels []string) (cloud.JobStatus, error) {
 	detail, ok := store.GetAnalysisDetail(id)
 	if !ok {
 		return cloud.JobStatus{}, fmt.Errorf("unknown analysis")
@@ -557,6 +581,22 @@ func (a *App) StartAnalysisJob(id string, projectPath string) (cloud.JobStatus, 
 		}
 	}
 	blobs := store.CollectNeededText(root, detail.Needs)
+	if id == "chapter_summaries" {
+		if len(chapterRels) == 0 {
+			return cloud.JobStatus{}, fmt.Errorf("select at least one chapter")
+		}
+		blobs = store.FilterManuscriptByRels(blobs, chapterRels)
+		hasMS := false
+		for _, b := range blobs {
+			if b.Role == "manuscript" {
+				hasMS = true
+				break
+			}
+		}
+		if !hasMS {
+			return cloud.JobStatus{}, fmt.Errorf("no matching chapters found")
+		}
+	}
 	if a.localAI == nil || a.localJobs == nil {
 		return cloud.JobStatus{}, fmt.Errorf("local AI is not available")
 	}
@@ -741,10 +781,24 @@ func (a *App) MatchAnalysisSources(projectPath string) store.AnalysisSources {
 }
 
 func (a *App) DeleteDiskFile(dir string, name string) (store.DeletedResult, error) {
-	if err := store.DeleteDiskFile(dir, name); err != nil {
-		return store.DeletedResult{}, err
-	}
-	return store.DeletedResult{Deleted: true}, nil
+	return withBusy(a, func() (store.DeletedResult, error) {
+		if err := store.DeleteDiskFile(dir, name); err != nil {
+			return store.DeletedResult{}, err
+		}
+		a.syncDiskHashesQuiet()
+		return store.DeletedResult{Deleted: true}, nil
+	})
+}
+
+func (a *App) MoveDiskFile(fromDir string, name string, toDir string) (store.DiskFile, error) {
+	return withBusy(a, func() (store.DiskFile, error) {
+		out, err := store.MoveDiskFile(fromDir, name, toDir)
+		if err != nil {
+			return store.DiskFile{}, err
+		}
+		a.syncDiskHashesQuiet()
+		return out, nil
+	})
 }
 
 func (a *App) ListWritingTree() (store.WritingTree, error) {

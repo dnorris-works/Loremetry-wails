@@ -50,6 +50,7 @@ func (s *Store) ListAnalysisRunEstimates() map[string]int {
 		}
 		out[id] = sec
 	}
+	_ = rows.Err()
 	return out
 }
 

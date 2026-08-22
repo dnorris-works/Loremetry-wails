@@ -451,6 +451,41 @@ func DeleteDiskFile(dir, name string) error {
 	return nil
 }
 
+// MoveDiskFile moves a text file into another folder, keeping the file name when possible.
+func MoveDiskFile(fromDir, name, toDir string) (DiskFile, error) {
+	from, err := diskFilePath(fromDir, name)
+	if err != nil {
+		return DiskFile{}, err
+	}
+	toDir = strings.TrimSpace(toDir)
+	if toDir == "" {
+		return DiskFile{}, fmt.Errorf("missing destination folder")
+	}
+	if err := os.MkdirAll(toDir, 0o755); err != nil {
+		return DiskFile{}, err
+	}
+	info, err := os.Stat(from)
+	if err != nil {
+		return DiskFile{}, err
+	}
+	if !info.Mode().IsRegular() {
+		return DiskFile{}, fmt.Errorf("not a file")
+	}
+	base := filepath.Base(from)
+	dest := filepath.Join(toDir, base)
+	if filepath.Clean(from) == filepath.Clean(dest) {
+		return DiskFile{Dir: toDir, Name: base, Path: dest}, nil
+	}
+	if _, err := os.Stat(dest); err == nil {
+		base = filepath.Base(uniqueRel(toDir, base))
+		dest = filepath.Join(toDir, base)
+	}
+	if err := os.Rename(from, dest); err != nil {
+		return DiskFile{}, err
+	}
+	return DiskFile{Dir: toDir, Name: base, Path: dest}, nil
+}
+
 func shouldRenumberDir(dir string) bool {
 	base := filepath.Base(dir)
 	if base == "01_Chapters" || base == "00_Current-Draft" {

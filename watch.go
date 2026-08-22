@@ -68,13 +68,25 @@ func (a *App) scanDiskHashes() {
 		return
 	}
 	changed, err := s.SyncDiskHashes(root)
-	if err != nil || !changed {
+	if err != nil || len(changed) == 0 {
 		return
 	}
-	a.emitFoldersChanged("")
+	a.emitFoldersChanged(changed)
 }
 
-func (a *App) emitFoldersChanged(path string) {
+func (a *App) syncDiskHashesQuiet() {
+	s, err := a.ready()
+	if err != nil {
+		return
+	}
+	root, err := a.writingRootIfSet()
+	if err != nil || root == "" {
+		return
+	}
+	_, _ = s.SyncDiskHashes(root)
+}
+
+func (a *App) emitFoldersChanged(path any) {
 	if a.ctx == nil {
 		return
 	}

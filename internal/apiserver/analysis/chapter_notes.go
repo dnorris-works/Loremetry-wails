@@ -26,9 +26,9 @@ func ChapterNoteSpecFor(analysisID string) ChapterNoteSpec {
 	switch analysisID {
 	case "chapter_summaries":
 		return spec(
-			"Write a real plot summary of this single chapter for the author. Cover who is present, what happens (in order), stakes or conflict, and any open loops or unanswered questions. Use concrete names and events—no vague marketing language. Do not write the full-book document yet.",
+			"Write a real plot summary of this single chapter for the author. Cover who is present, what happens (in order), stakes or conflict, and any open loops or unanswered questions. Use concrete names and events—no vague marketing language. When character profiles are provided, treat them as the source of truth for names and relationships; do not invent kinship, roles, or labels that contradict the profiles or are not supported by the chapter. Do not write the full-book document yet.",
 			[]string{"Who is present", "What happens", "Stakes or conflict", "Open loops"},
-			"Assemble an ordered chapter-by-chapter plot summary document from the chapter notes below. One section per chapter with a clear heading. Keep each summary concrete and faithful to the notes.",
+			"Assemble an ordered chapter-by-chapter plot summary document from the chapter notes below. One section per chapter with a clear heading. Keep each summary concrete and faithful to the notes and character profiles; do not invent relationships.",
 		)
 
 	// Craft — Prose

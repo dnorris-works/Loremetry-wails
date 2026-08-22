@@ -9,8 +9,14 @@ import { persistTheme, readTheme } from '@/lib/theme';
 import { isAuthenticated, signOut } from '@/auth/session';
 import { filesFromList, markHtmlFileDrop } from '@/lib/import-docs';
 import { formatElapsed } from '@/lib/utils';
+import { clearSidebarDrag, hasFiles, setSidebarDrag, sidebarDrag } from '@/lib/sidebar-drag';
 
 const nest = 'ml-[2ch] border-l border-border pl-2';
+
+function isCharacterTypeFolder(node) {
+    const name = (node?.name || '').toLowerCase();
+    return name === 'main' || name === 'supporting' || name === 'minor' || name === 'characters';
+}
 
 function needReady(sources, need) {
     const role = (sources?.roles || []).find((r) => r.role === need);
@@ -288,13 +294,14 @@ export function Sidebar({ onNewSeries, onEditSeries, onNewStory, onEditStory, on
 }
 
 function FolderNode({ node, projectPath }) {
-    const { setSelection, bumpRefresh, openFolders, toggleFolder, ensureFolder } = useAppState();
+    const { selection, setSelection, bumpRefresh, openFolders, toggleFolder, ensureFolder } = useAppState();
     const confirm = useConfirm();
     const files = node.files || [];
     const folders = node.folders || [];
     const hasKids = files.length > 0 || folders.length > 0;
     const open = openFolders.includes(node.path);
     const key = node.key || node.name;
+    const acceptCharacterDrop = isCharacterTypeFolder(node);
     async function addDoc() {
         const created = await api.createDiskFile(node.path, '', '');
         bumpRefresh();
@@ -311,14 +318,38 @@ function FolderNode({ node, projectPath }) {
         await ensureFolder(node.path);
         setSelection({ type: 'file', dir: node.path, name: last.name });
     }
+    async function dropSidebarFile(item) {
+        if (!item || item.t !== 'file' || !item.dir || !item.name)
+            return;
+        if (item.dir === node.path)
+            return;
+        try {
+            const moved = await api.moveDiskFile(item.dir, item.name, node.path);
+            if (selection?.type === 'file' && selection.dir === item.dir && selection.name === item.name) {
+                setSelection({ type: 'file', dir: moved.dir || node.path, name: moved.name || item.name });
+            }
+            bumpRefresh();
+            await ensureFolder(node.path);
+        }
+        catch (err) {
+            alert(err instanceof Error ? err.message : 'Could not move');
+        }
+    }
     async function setHidden(hide) {
         await api.setFolderOverride(projectPath, key, hide ? 'hide' : 'show');
         bumpRefresh();
     }
     return (<div className="rounded [--wails-drop-target:drop]" data-folder-path={node.path} onDragOver={(e) => {
-            if (e.dataTransfer.types.includes('Files'))
+            if (hasFiles(e) || (acceptCharacterDrop && sidebarDrag(e)))
                 e.preventDefault();
         }} onDrop={(e) => {
+            const item = sidebarDrag(e);
+            if (item?.t === 'file' && acceptCharacterDrop) {
+                e.preventDefault();
+                clearSidebarDrag();
+                void dropSidebarFile(item);
+                return;
+            }
             if (e.dataTransfer.files.length) {
                 e.preventDefault();
                 void dropFiles(e.dataTransfer.files);
@@ -348,9 +379,14 @@ function FolderNode({ node, projectPath }) {
     </div>);
 }
 
+function underCharacters(dir) {
+    return /[/\\]Characters([/\\]|$)/i.test(dir || '');
+}
+
 function FileRow({ dir, file, onDelete }) {
     const { setSelection } = useAppState();
-    return (<div className="flex h-5 items-center">
+    const allowDrag = underCharacters(dir);
+    return (<div className="flex h-5 items-center" draggable={allowDrag} onDragStart={allowDrag ? (e) => setSidebarDrag(e, { t: 'file', dir, name: file.name }) : undefined} onDragEnd={allowDrag ? () => clearSidebarDrag() : undefined}>
       <button type="button" className="min-w-0 flex-1 truncate py-0 text-left text-xs font-normal leading-tight text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => setSelection({ type: 'file', dir, name: file.name })}>
         {file.name}
       </button>

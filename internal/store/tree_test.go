@@ -74,3 +74,28 @@ func TestFolderCountIncludesNestedActs(t *testing.T) {
 		t.Fatalf("got count %d label %q", node.Count, node.Label)
 	}
 }
+
+func TestCharacterTypeFolderOrder(t *testing.T) {
+	root := t.TempDir()
+	chars := filepath.Join(root, "Characters")
+	// Create out of order so alpha sort would put Minor before Supporting.
+	for _, name := range []string{"Minor", "Zebra", "Main", "Supporting"} {
+		if err := os.MkdirAll(filepath.Join(chars, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	node := scanDirNode(chars)
+	got := make([]string, 0, len(node.Folders))
+	for _, f := range node.Folders {
+		got = append(got, f.Name)
+	}
+	want := []string{"Main", "Supporting", "Minor", "Zebra"}
+	if len(got) != len(want) {
+		t.Fatalf("folders=%v want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("folders=%v want %v", got, want)
+		}
+	}
+}

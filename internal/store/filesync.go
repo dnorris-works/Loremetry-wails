@@ -263,8 +263,9 @@ func (s *Store) syncCharacters(scope string, ownerID int64, dir string, files []
 			id = matchRow(rows, name, seen)
 		}
 		display := uniqueDisplayName(used, f.Rel, name)
+		importance := characterImportanceFromRel(f.Rel)
 		if id == 0 {
-			in := CharacterInput{CharacterName: display, CharacterVoiceNotes: notes}
+			in := CharacterInput{CharacterName: display, CharacterVoiceNotes: notes, StoryImportance: importance}
 			if scope == "series" {
 				in.SeriesID = ownerID
 			} else {
@@ -280,11 +281,11 @@ func (s *Store) syncCharacters(scope string, ownerID int64, dir string, files []
 			return nil, err
 		}
 		if _, err := s.DB.Exec(`
-			UPDATE character_profiles SET character_name = ?, character_voice_notes = ?, source_rel = ?, updated_at = datetime('now')
-			WHERE id = ?`, display, emptyToNil(notes), f.Rel, id); err != nil {
+			UPDATE character_profiles SET character_name = ?, character_voice_notes = ?, story_importance = ?, source_rel = ?, updated_at = datetime('now')
+			WHERE id = ?`, display, emptyToNil(notes), emptyToNil(importance), f.Rel, id); err != nil {
 			return nil, err
 		}
-		if old.CharacterName != display || strOr(old.CharacterVoiceNotes) != notes {
+		if old.CharacterName != display || strOr(old.CharacterVoiceNotes) != notes || strOr(old.StoryImportance) != importance {
 			changes = append(changes, FolderChange{Type: "character", ID: id})
 		}
 	}
@@ -563,9 +564,9 @@ func (s *Store) deleteStoryDocOnly(id int64) (DeletedResult, error) {
 
 func (s *Store) insertCharacterOnly(in CharacterInput, rel string) (IDResult, error) {
 	res, err := s.DB.Exec(`
-		INSERT INTO character_profiles (series_id, story_id, character_name, character_voice_notes, pov_character, source_rel, created_at, updated_at)
-		VALUES (?, ?, ?, ?, 0, ?, datetime('now'), datetime('now'))`,
-		zeroToNilInt64(in.SeriesID), zeroToNilInt64(in.StoryID), in.CharacterName, emptyToNil(in.CharacterVoiceNotes), emptyToNil(rel))
+		INSERT INTO character_profiles (series_id, story_id, character_name, story_importance, character_voice_notes, pov_character, source_rel, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'), datetime('now'))`,
+		zeroToNilInt64(in.SeriesID), zeroToNilInt64(in.StoryID), in.CharacterName, emptyToNil(in.StoryImportance), emptyToNil(in.CharacterVoiceNotes), emptyToNil(rel))
 	if err != nil {
 		return IDResult{}, err
 	}
@@ -830,6 +831,23 @@ func chapterFileSort(f diskFile) string {
 
 func slashRel(rel string) string {
 	return filepath.ToSlash(rel)
+}
+
+func characterImportanceFromRel(rel string) string {
+	parts := strings.Split(slashRel(rel), "/")
+	if len(parts) < 2 {
+		return ""
+	}
+	switch strings.ToLower(parts[0]) {
+	case "main":
+		return "Main"
+	case "supporting":
+		return "Supporting"
+	case "minor":
+		return "Minor"
+	default:
+		return ""
+	}
 }
 
 func relWithBase(rel, base string) string {

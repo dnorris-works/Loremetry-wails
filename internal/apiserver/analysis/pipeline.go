@@ -208,7 +208,10 @@ func (r *Runner) runByChapter(ctx context.Context, analysisID string, sources []
 			label = fmt.Sprintf("Analyzing %s (%d of %d)…", name, i+1, len(chapters))
 		}
 		r.progress(i+1, total, label)
-		user := StepPrompt("analyze_chapter", analysisID, []Source{ch}, nil)
+		chapterSources := make([]Source, 0, 1+len(other))
+		chapterSources = append(chapterSources, other...)
+		chapterSources = append(chapterSources, ch)
+		user := StepPrompt("analyze_chapter", analysisID, chapterSources, nil)
 		out, _, err := r.Gateway.Complete(ctx, models.TierFast, sys, user)
 		if err != nil {
 			return "", err

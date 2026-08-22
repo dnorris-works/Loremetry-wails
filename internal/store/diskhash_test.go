@@ -18,11 +18,11 @@ func TestSyncDiskHashesDetectsMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	changed, err := s.SyncDiskHashes(root)
-	if err != nil || !changed {
+	if err != nil || len(changed) == 0 {
 		t.Fatalf("first scan: %v %v", changed, err)
 	}
 	changed, err = s.SyncDiskHashes(root)
-	if err != nil || changed {
+	if err != nil || len(changed) != 0 {
 		t.Fatalf("stable: %v %v", changed, err)
 	}
 	if err := os.MkdirAll(next, 0o755); err != nil {
@@ -32,7 +32,7 @@ func TestSyncDiskHashesDetectsMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	changed, err = s.SyncDiskHashes(root)
-	if err != nil || !changed {
+	if err != nil || len(changed) == 0 {
 		t.Fatalf("move: %v %v", changed, err)
 	}
 }

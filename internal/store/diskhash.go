@@ -12,23 +12,27 @@ import (
 
 const maxHashBytes = 256 << 10 // 256 KB — larger files use size+modtime
 
-func (s *Store) SyncDiskHashes(root string) (bool, error) {
+func (s *Store) SyncDiskHashes(root string) ([]string, error) {
 	root = filepath.Clean(strings.TrimSpace(root))
 	if root == "" {
-		return false, nil
+		return nil, nil
 	}
 	next, err := scanDiskHashes(root)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	prev, err := s.loadDiskHashes(root)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if hashesEqual(prev, next) {
-		return false, nil
+		return nil, nil
 	}
-	return true, s.replaceDiskHashes(root, next)
+	changed := diffHashes(prev, next)
+	if err := s.replaceDiskHashes(root, next); err != nil {
+		return nil, err
+	}
+	return changed, nil
 }
 
 func scanDiskHashes(root string) (map[string]string, error) {
@@ -139,4 +143,19 @@ func hashesEqual(a, b map[string]string) bool {
 		}
 	}
 	return true
+}
+
+func diffHashes(prev, next map[string]string) []string {
+	out := make([]string, 0)
+	for k, v := range next {
+		if prev[k] != v {
+			out = append(out, k)
+		}
+	}
+	for k := range prev {
+		if _, ok := next[k]; !ok {
+			out = append(out, k)
+		}
+	}
+	return out
 }

@@ -160,3 +160,34 @@ func TestManuscriptChaptersFromFiles(t *testing.T) {
 		t.Fatalf("other=%+v", other)
 	}
 }
+
+func TestRunByChapterIncludesCharacterProfiles(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "loremetry-app.db")
+	conn, err := appdb.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	store.SetCatalogDB(conn)
+
+	gw := &recordingGateway{}
+	runner := Runner{Gateway: gw}
+	sources := []Source{
+		{Role: "characters", Name: "Zoe.md", Text: "CHARACTER_PROFILE_MARKER: Zoe is Maya's roommate."},
+		{Role: "manuscript", Name: "01.md", Text: "Maya and Zoe talk."},
+	}
+	_, err = runner.Run(context.Background(), "chapter_summaries", sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var chapterCallHasProfile bool
+	for _, u := range gw.users {
+		if strings.Contains(u, "Write a real plot summary") && strings.Contains(u, "CHARACTER_PROFILE_MARKER") {
+			chapterCallHasProfile = true
+			break
+		}
+	}
+	if !chapterCallHasProfile {
+		t.Fatalf("chapter analysis must include character profiles; users=%v", gw.users)
+	}
+}

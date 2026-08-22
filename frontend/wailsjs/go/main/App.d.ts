@@ -121,6 +121,8 @@ export function ListAnalysisReports():Promise<Array<store.AnalysisReportSummary>
 
 export function ListAnalysisRunEstimates():Promise<Record<string, number>>;
 
+export function ListChapterSummaryChapters(arg1:string):Promise<Array<store.ChapterSummaryChapter>>;
+
 export function ListChapters(arg1:number):Promise<Array<store.Chapter>>;
 
 export function ListCharacters(arg1:number):Promise<Array<store.CharacterProfile>>;
@@ -154,6 +156,8 @@ export function LocalAIStatus():Promise<localai.Status>;
 export function ManuscriptChapterStickyContext(arg1:string,arg2:string):Promise<store.StickyChapterContext>;
 
 export function MatchAnalysisSources(arg1:string):Promise<store.AnalysisSources>;
+
+export function MoveDiskFile(arg1:string,arg2:string,arg3:string):Promise<store.DiskFile>;
 
 export function NeedsChunking(arg1:string,arg2:string):Promise<boolean>;
 
@@ -215,7 +219,7 @@ export function SetShowHiddenFolders(arg1:boolean):Promise<store.FolderVisibilit
 
 export function SetUISelection(arg1:string,arg2:string):Promise<store.UISession>;
 
-export function StartAnalysisJob(arg1:string,arg2:string):Promise<cloud.JobStatus>;
+export function StartAnalysisJob(arg1:string,arg2:string,arg3:Array<string>):Promise<cloud.JobStatus>;
 
 export function SyncAllFolders():Promise<Array<store.FolderChange>>;
 

@@ -37,4 +37,11 @@ func TestAnalysisCatalog(t *testing.T) {
 	if len(genre.DependsOn) != 0 {
 		t.Fatalf("genre should not depend on chapter_summaries, got %+v", genre.DependsOn)
 	}
+	summary, ok := GetAnalysisDetail("chapter_summaries")
+	if !ok || !summary.UsesAI {
+		t.Fatalf("chapter_summaries %+v %v", summary, ok)
+	}
+	if len(summary.Needs) != 2 || summary.Needs[0] != "manuscript" || summary.Needs[1] != "characters" {
+		t.Fatalf("chapter_summaries needs %+v", summary.Needs)
+	}
 }

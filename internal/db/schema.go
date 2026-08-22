@@ -151,7 +151,7 @@ CREATE TABLE analysis_catalog (
 
 -- Group: KDP / Wide
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
-  ('chapter_summaries', 'kdp-wide', 'KDP / Wide', 'Chapter Plot Summary', 'Real plot summary per chapter: who acts, what happens, stakes, and open loops.', 'Optional reference for you—not required by other analyses. Each chapter is summarized, then assembled into one document.', '["manuscript"]', '[]', 1, 0, 'by_chapter', 1);
+  ('chapter_summaries', 'kdp-wide', 'KDP / Wide', 'Chapter Plot Summary', 'Real plot summary per chapter: who acts, what happens, stakes, and open loops.', 'Optional reference for you—not required by other analyses. Each chapter is summarized with character profiles, then assembled into one document.', '["manuscript","characters"]', '[]', 1, 0, 'by_chapter', 1);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
   ('analysis', 'kdp-wide', 'KDP / Wide', 'KDP Analysis', 'Genre, Kindle and paperback categories, print BISAC, seven keywords, and ready-to-paste KDP metadata.', 'Copy categories, BISAC, and keywords into KDP. Save this report before you change the manuscript.', '["manuscript","plot"]', '["mi_search_terms"]', 1, 0, 'by_chapter', 2);
 INSERT INTO analysis_catalog (id, group_id, group_label, label, description, usage, needs, depends_on, uses_ai, uses_merge, ai_profile, sort_order) VALUES
@@ -346,5 +346,13 @@ CREATE TABLE IF NOT EXISTS analysis_run_stats (
     last_ms     INTEGER NOT NULL DEFAULT 0,
     avg_ms      INTEGER NOT NULL DEFAULT 0,
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS chapter_descriptions (
+    project_path TEXT NOT NULL,
+    chapter_rel  TEXT NOT NULL,
+    description  TEXT NOT NULL DEFAULT '',
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (project_path, chapter_rel)
 );
 `

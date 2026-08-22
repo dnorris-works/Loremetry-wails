@@ -548,6 +548,22 @@ export namespace store {
 	        this.act_id = source["act_id"];
 	    }
 	}
+	export class ChapterSummaryChapter {
+	    rel: string;
+	    name: string;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChapterSummaryChapter(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.rel = source["rel"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	    }
+	}
 	export class CharacterInput {
 	    series_id: number;
 	    story_id: number;

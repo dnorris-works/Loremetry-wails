@@ -234,6 +234,10 @@ export function ListAnalysisRunEstimates() {
   return window['go']['main']['App']['ListAnalysisRunEstimates']();
 }
 
+export function ListChapterSummaryChapters(arg1) {
+  return window['go']['main']['App']['ListChapterSummaryChapters'](arg1);
+}
+
 export function ListChapters(arg1) {
   return window['go']['main']['App']['ListChapters'](arg1);
 }
@@ -300,6 +304,10 @@ export function ManuscriptChapterStickyContext(arg1, arg2) {
 
 export function MatchAnalysisSources(arg1) {
   return window['go']['main']['App']['MatchAnalysisSources'](arg1);
+}
+
+export function MoveDiskFile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MoveDiskFile'](arg1, arg2, arg3);
 }
 
 export function NeedsChunking(arg1, arg2) {
@@ -422,8 +430,8 @@ export function SetUISelection(arg1, arg2) {
   return window['go']['main']['App']['SetUISelection'](arg1, arg2);
 }
 
-export function StartAnalysisJob(arg1, arg2) {
-  return window['go']['main']['App']['StartAnalysisJob'](arg1, arg2);
+export function StartAnalysisJob(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartAnalysisJob'](arg1, arg2, arg3);
 }
 
 export function SyncAllFolders() {

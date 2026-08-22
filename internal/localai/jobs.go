@@ -161,17 +161,19 @@ func formatElapsed(d time.Duration) string {
 	return fmt.Sprintf("%dm %02ds", sec/60, sec%60)
 }
 
-func busyMessage(label string, stepElapsed, jobElapsed, estimate time.Duration) string {
+func busyMessage(label string, stepElapsed, jobElapsed, estimate time.Duration, multiStep bool) string {
 	base := strings.TrimSpace(label)
 	base = strings.TrimRight(base, "….")
 	if base == "" {
 		base = "Working"
 	}
 	msg := fmt.Sprintf("%s… · %s", base, formatElapsed(stepElapsed))
+	if multiStep || estimate > 0 {
+		msg += fmt.Sprintf(" · total %s", formatElapsed(jobElapsed))
+	}
 	if estimate <= 0 {
 		return msg
 	}
-	msg += fmt.Sprintf(" · job %s", formatElapsed(jobElapsed))
 	left := estimate - jobElapsed
 	switch {
 	case left > 15*time.Second:
@@ -252,7 +254,7 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 					if j.Status != "running" {
 						return
 					}
-					j.Message = busyMessage("Starting local AI", time.Since(startAI), time.Since(jobStart), estimate)
+					j.Message = busyMessage("Starting local AI", time.Since(startAI), time.Since(jobStart), estimate, j.StepTotal > 1)
 				})
 			}
 		}
@@ -302,7 +304,7 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 				if j.Status != "running" {
 					return
 				}
-				j.Message = busyMessage(label, stepElapsed, jobElapsed, estimate)
+				j.Message = busyMessage(label, stepElapsed, jobElapsed, estimate, j.StepTotal > 1)
 			})
 		},
 	}
@@ -328,7 +330,7 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 				j.Status = "running"
 				j.Step = step
 				j.StepTotal = total
-				j.Message = busyMessage(label, 0, jobElapsed, estimate)
+				j.Message = busyMessage(label, 0, jobElapsed, estimate, total > 1)
 			})
 		},
 	}
@@ -337,7 +339,7 @@ func (s *JobStore) run(mgr *Manager, jobID, analysisID string, sources []analysi
 		if j.Status == "cancelled" {
 			return
 		}
-		j.Message = busyMessage("Preparing analysis", 0, time.Since(jobStart), estimate)
+		j.Message = busyMessage("Preparing analysis", 0, time.Since(jobStart), estimate, j.StepTotal > 1)
 	})
 	if jobCtx.Err() != nil {
 		s.update(jobID, func(j *cloud.JobStatus) {

@@ -168,6 +168,9 @@ func treeBook(path, folder string) TreeBook {
 }
 
 func scanDirNode(path string) DirNode {
+	if isCharactersFolder(path) {
+		ensureCharacterTypeFolders(path)
+	}
 	node := DirNode{Name: filepath.Base(path), Path: path, Files: []DirFile{}, Folders: []DirNode{}}
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -187,8 +190,9 @@ func scanDirNode(path string) DirNode {
 		}
 		node.Files = append(node.Files, DirFile{Name: e.Name(), Path: child})
 	}
+	parentName := filepath.Base(path)
 	sort.Slice(node.Folders, func(i, j int) bool {
-		return strings.ToLower(node.Folders[i].Name) < strings.ToLower(node.Folders[j].Name)
+		return folderSortKey(parentName, node.Folders[i].Name) < folderSortKey(parentName, node.Folders[j].Name)
 	})
 	sort.Slice(node.Files, func(i, j int) bool {
 		return strings.ToLower(node.Files[i].Name) < strings.ToLower(node.Files[j].Name)
@@ -199,6 +203,32 @@ func scanDirNode(path string) DirNode {
 	}
 	node.Label = fmt.Sprintf("%s (%d)", node.Name, node.Count)
 	return node
+}
+
+var characterTypeOrder = map[string]int{
+	"main":       0,
+	"supporting": 1,
+	"minor":      2,
+}
+
+func isCharactersFolder(path string) bool {
+	return strings.EqualFold(filepath.Base(path), "Characters")
+}
+
+func ensureCharacterTypeFolders(path string) {
+	for _, name := range []string{"Main", "Supporting", "Minor"} {
+		_ = os.MkdirAll(filepath.Join(path, name), 0o755)
+	}
+}
+
+func folderSortKey(parentName, name string) string {
+	if strings.EqualFold(parentName, "Characters") {
+		if ord, ok := characterTypeOrder[strings.ToLower(name)]; ok {
+			return fmt.Sprintf("%d-%s", ord, strings.ToLower(name))
+		}
+		return fmt.Sprintf("9-%s", strings.ToLower(name))
+	}
+	return strings.ToLower(name)
 }
 
 func displayBookName(folder string) string {

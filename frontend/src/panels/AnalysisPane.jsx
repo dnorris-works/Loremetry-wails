@@ -9,6 +9,7 @@ import { StickyChapterDialog } from '@/editor/StickyChapterDialog';
 import { VisualCompareView } from '@/editor/VisualCompareView';
 import { ReportSearchBar, useReportSearch } from '@/editor/ReportSearch';
 import { formatElapsed } from '@/lib/utils';
+import { ChapterSummaryPicker } from '@/panels/ChapterSummaryPicker';
 
 function usesAI(detail) {
     return !!(detail?.uses_ai ?? detail?.usesAI);
@@ -16,6 +17,10 @@ function usesAI(detail) {
 
 function usesMerge(detail) {
     return !!(detail?.uses_merge ?? detail?.usesMerge);
+}
+
+function isChapterSummaries(detail) {
+    return detail?.id === 'chapter_summaries';
 }
 
 function parseStickyData(raw) {
@@ -69,9 +74,11 @@ export function AnalysisPane() {
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState('');
     const [estimateSec, setEstimateSec] = useState(0);
+    const [jobStepTotal, setJobStepTotal] = useState(0);
     const [progressTick, setProgressTick] = useState(0);
     const progressStepStarted = useRef(0);
-    const lastProgressText = useRef('');
+    const progressRunStarted = useRef(0);
+    const lastProgressKey = useRef('');
     const [body, setBody] = useState('');
     const [mergeOriginal, setMergeOriginal] = useState('');
     const [mergeProposed, setMergeProposed] = useState('');
@@ -81,6 +88,10 @@ export function AnalysisPane() {
     const [stickyOpen, setStickyOpen] = useState(false);
     const [stickyContext, setStickyContext] = useState(null);
     const [stickyError, setStickyError] = useState('');
+    const [chapterList, setChapterList] = useState([]);
+    const [chapterSelected, setChapterSelected] = useState(() => new Set());
+    const [chaptersLoading, setChaptersLoading] = useState(false);
+    const [chaptersError, setChaptersError] = useState('');
     const searchApiRef = useRef(null);
     const search = useReportSearch(searchApiRef);
     const projectPath = selection?.dir || '';
@@ -91,6 +102,7 @@ export function AnalysisPane() {
     const queueLabelsRef = useRef([]);
     const activeJobIdRef = useRef('');
     const stopRequestedRef = useRef(false);
+    const chapterRelsRef = useRef([]);
 
     useEffect(() => {
         if (!analysisId) {
@@ -104,10 +116,15 @@ export function AnalysisPane() {
         setView('report');
         setNotice('');
         setProgress('');
+        setJobStepTotal(0);
         setStickyOpen(false);
         setStickyContext(null);
         setStickyError('');
+        setChapterList([]);
+        setChapterSelected(new Set());
+        setChaptersError('');
         autoRanFor.current = '';
+        chapterRelsRef.current = [];
         let cancelled = false;
         void api.getAnalysis(analysisId).then((d) => {
             if (!cancelled)
@@ -120,6 +137,33 @@ export function AnalysisPane() {
             cancelled = true;
         };
     }, [analysisId]);
+
+    useEffect(() => {
+        if (!detail || !isChapterSummaries(detail) || !projectPath) {
+            return undefined;
+        }
+        let cancelled = false;
+        setChaptersLoading(true);
+        setChaptersError('');
+        void api.listChapterSummaryChapters(projectPath).then((list) => {
+            if (cancelled)
+                return;
+            const rows = Array.isArray(list) ? list : [];
+            setChapterList(rows);
+            setChapterSelected(new Set(rows.map((c) => c.rel).filter(Boolean)));
+            setChaptersLoading(false);
+        }).catch((err) => {
+            if (cancelled)
+                return;
+            setChapterList([]);
+            setChapterSelected(new Set());
+            setChaptersError(err instanceof Error ? err.message : 'Could not load chapters');
+            setChaptersLoading(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [detail, projectPath]);
 
     useEffect(() => {
         const ids = analysisQueue?.length ? analysisQueue : (analysisId ? [analysisId] : []);
@@ -146,24 +190,27 @@ export function AnalysisPane() {
     useEffect(() => {
         if (!busy) {
             progressStepStarted.current = 0;
-            lastProgressText.current = '';
+            lastProgressKey.current = '';
             return undefined;
         }
+        if (!progressRunStarted.current)
+            progressRunStarted.current = Date.now();
         const id = setInterval(() => setProgressTick((n) => n + 1), 1000);
         return () => clearInterval(id);
     }, [busy]);
 
-    function setLiveProgress(text) {
+    function setLiveProgress(text, step, stepTotal) {
         const next = text || '';
-        // Strip trailing elapsed from server messages so step changes reset the timer.
-        const key = next.replace(/\s*·\s*\d+m?\s*\d*s?\s*$/, '').replace(/\s*·\s*\d+s\s*$/, '');
-        if (key !== lastProgressText.current) {
-            lastProgressText.current = key;
+        const key = `${step || 0}/${stepTotal || 0}:${(next || '').replace(/\s*·.*$/, '')}`;
+        if (key !== lastProgressKey.current) {
+            lastProgressKey.current = key;
             progressStepStarted.current = Date.now();
         }
         else if (!progressStepStarted.current) {
             progressStepStarted.current = Date.now();
         }
+        if (stepTotal > 0)
+            setJobStepTotal(stepTotal);
         setProgress(next);
     }
 
@@ -202,7 +249,8 @@ export function AnalysisPane() {
         if (usesAI(info)) {
             if (stopRequestedRef.current)
                 return { cancelled: true };
-            let job = await api.startAnalysisJob(id, projectPath);
+            const chapterRels = id === 'chapter_summaries' ? (chapterRelsRef.current || []) : [];
+            let job = await api.startAnalysisJob(id, projectPath, chapterRels);
             const startEst = job.estimate_sec || job.estimateSec || 0;
             if (startEst > 0)
                 setEstimateSec(startEst);
@@ -213,7 +261,9 @@ export function AnalysisPane() {
                     const est = job.estimate_sec || job.estimateSec || 0;
                     if (est > 0)
                         setEstimateSec(est);
-                    setLiveProgress(progressLabel(job.status, job.step, job.step_total || job.stepTotal, job.message));
+                    const step = job.step || 0;
+                    const stepTotal = job.step_total || job.stepTotal || 0;
+                    setLiveProgress(progressLabel(job.status, step, stepTotal, job.message), step, stepTotal);
                     await sleep(1000);
                     job = await api.getAnalysisJobStatus(jobID);
                 }
@@ -227,7 +277,8 @@ export function AnalysisPane() {
             const bodyText = job.body || '';
             const orig = job.original || job.Original || '';
             const prop = job.proposed || job.Proposed || '';
-            return api.persistAnalysisResult(id, projectPath, bodyText, orig, prop, '');
+            const report = await api.persistAnalysisResult(id, projectPath, bodyText, orig, prop, '');
+            return { ...report, doneMessage: job.message || '' };
         }
         if (stopRequestedRef.current)
             return { cancelled: true };
@@ -236,7 +287,7 @@ export function AnalysisPane() {
 
     async function stopAnalysis() {
         stopRequestedRef.current = true;
-        setLiveProgress('Stopping…');
+        setLiveProgress('Stopping…', 0, jobStepTotal);
         const jobID = activeJobIdRef.current;
         if (jobID) {
             try {
@@ -251,16 +302,26 @@ export function AnalysisPane() {
     async function run() {
         const current = detailRef.current;
         if (!current || busyRef.current) return;
-        const runQueue = queueRef.current.length ? queueRef.current : [current.id];
+        if (isChapterSummaries(current) && !(chapterRelsRef.current || []).length) {
+            setNotice('Select at least one chapter');
+            return;
+        }
+        const runQueue = isChapterSummaries(current)
+            ? [current.id]
+            : (queueRef.current.length ? queueRef.current : [current.id]);
         const labels = queueLabelsRef.current;
         stopRequestedRef.current = false;
         activeJobIdRef.current = '';
+        progressRunStarted.current = Date.now();
+        progressStepStarted.current = Date.now();
         setBusy(true);
         setNotice('');
         setEstimateSec(0);
-        setLiveProgress('');
+        setJobStepTotal(0);
+        setLiveProgress('', 0, 0);
         try {
             let primary = null;
+            let doneMessage = '';
             let stopped = false;
             for (let i = 0; i < runQueue.length; i++) {
                 if (stopRequestedRef.current) {
@@ -269,19 +330,24 @@ export function AnalysisPane() {
                 }
                 const id = runQueue[i];
                 const label = labels[i] || id;
-                setLiveProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…');
+                setLiveProgress(runQueue.length > 1 ? `${label} (${i + 1}/${runQueue.length})…` : 'Running…', i + 1, runQueue.length);
                 const report = await runOne(id);
                 if (report?.cancelled || stopRequestedRef.current) {
                     stopped = true;
                     break;
                 }
-                if (id === current.id)
+                if (id === current.id) {
                     primary = report;
+                    doneMessage = report?.doneMessage || '';
+                }
             }
             if (stopped)
                 setNotice('Analysis stopped');
-            else if (primary)
+            else if (primary) {
                 applyReport(primary, current);
+                if (doneMessage)
+                    setNotice(doneMessage);
+            }
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : 'Could not run analysis';
@@ -293,9 +359,24 @@ export function AnalysisPane() {
             setBusy(false);
             setProgress('');
             setEstimateSec(0);
-            lastProgressText.current = '';
+            setJobStepTotal(0);
+            lastProgressKey.current = '';
             progressStepStarted.current = 0;
+            progressRunStarted.current = 0;
         }
+    }
+
+    function runChapterSummary() {
+        chapterRelsRef.current = [...chapterSelected];
+        void run();
+    }
+
+    function backToChapterPicker() {
+        setBody('');
+        setMergeOriginal('');
+        setMergeProposed('');
+        setNotice('');
+        setSaved(false);
     }
 
     useEffect(() => {
@@ -304,6 +385,8 @@ export function AnalysisPane() {
             setNotice('Select a book or series folder in Projects first.');
             return;
         }
+        if (isChapterSummaries(detail))
+            return;
         if (autoRanFor.current === analysisId) return;
         autoRanFor.current = analysisId;
         void run();
@@ -336,6 +419,8 @@ export function AnalysisPane() {
     const hasMerge = !!(mergeOriginal && mergeProposed);
     const hasOutput = mergeFlag ? hasMerge : !!body;
     const isVellum = detail.id === 'vellum_prep';
+    const chapterPicker = isChapterSummaries(detail);
+    const showMultiElapsed = busy && (jobStepTotal > 1 || (chapterPicker && chapterSelected.size > 1));
     return (<div className="flex h-full flex-col">
       <div className="border-b border-border">
         <div className="flex items-center gap-2 px-4 py-2">
@@ -366,6 +451,11 @@ export function AnalysisPane() {
           {busy && (
             <Button size="sm" variant="outline" onClick={() => void stopAnalysis()} className="ml-auto shrink-0 gap-1.5" title="Stop analysis">
               <Square className="h-3 w-3 fill-current"/>Stop
+            </Button>
+          )}
+          {hasOutput && chapterPicker && !busy && (
+            <Button size="sm" variant="outline" onClick={backToChapterPicker} className="shrink-0">
+              Run again
             </Button>
           )}
           {hasOutput && isVellum && (
@@ -406,6 +496,28 @@ export function AnalysisPane() {
               />
             )}
           </>
+        ) : chapterPicker && !busy ? (
+          <ChapterSummaryPicker
+            chapters={chapterList}
+            selected={chapterSelected}
+            loading={chaptersLoading}
+            error={chaptersError || (notice && notice !== 'Analysis stopped' ? notice : '')}
+            onToggle={(rel) => {
+              setChapterSelected((prev) => {
+                const next = new Set(prev);
+                if (next.has(rel))
+                  next.delete(rel);
+                else
+                  next.add(rel);
+                return next;
+              });
+              if (notice)
+                setNotice('');
+            }}
+            onSelectAll={() => setChapterSelected(new Set(chapterList.map((c) => c.rel).filter(Boolean)))}
+            onClear={() => setChapterSelected(new Set())}
+            onRun={runChapterSummary}
+          />
         ) : (<div className="overflow-auto p-6">
           {busy || progress ? (
             <div className="space-y-1">
@@ -418,6 +530,9 @@ export function AnalysisPane() {
               {busy && progressStepStarted.current > 0 && (
                 <p className="text-xs text-muted-foreground/80">
                   Elapsed on this step: {formatElapsed(Date.now() - progressStepStarted.current)}
+                  {showMultiElapsed && progressRunStarted.current > 0 && (
+                    <> · Total: {formatElapsed(Date.now() - progressRunStarted.current)}</>
+                  )}
                   <span className="sr-only">{progressTick}</span>
                 </p>
               )}
@@ -426,8 +541,8 @@ export function AnalysisPane() {
             <div className="max-w-2xl space-y-2">
               <p className={`text-sm ${notice === 'Analysis stopped' ? 'text-muted-foreground' : 'text-destructive'}`}>{notice}</p>
               {notice === 'Analysis stopped' && (
-                <Button size="sm" variant="outline" onClick={() => { setNotice(''); void run(); }}>
-                  Run again
+                <Button size="sm" variant="outline" onClick={() => { setNotice(''); if (chapterPicker) return; void run(); }}>
+                  {chapterPicker ? 'Back' : 'Run again'}
                 </Button>
               )}
             </div>

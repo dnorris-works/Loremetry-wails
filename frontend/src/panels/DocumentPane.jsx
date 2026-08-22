@@ -19,12 +19,21 @@ function useDiskChange(selection, dirty, onReload) {
     useEffect(() => {
         if (selection.type !== 'file')
             return undefined;
-        return EventsOn('folders-changed', (path) => {
+        return EventsOn('folders-changed', (payload) => {
             const sel = selRef.current;
             if (sel.type !== 'file')
                 return;
-            const changed = typeof path === 'string' ? path : '';
-            if (changed && sel.name && !changed.replace(/\\/g, '/').includes(sel.name.replace(/\\/g, '/')))
+            // Only prompt for explicit changed-file lists from the disk watcher.
+            // Generic refreshes (empty string / no list) are for the sidebar only.
+            const changed = Array.isArray(payload) ? payload : null;
+            if (!changed || !changed.length)
+                return;
+            const openFull = `${sel.dir}/${sel.name}`.replace(/\\/g, '/');
+            const hit = changed.some((rel) => {
+                const r = String(rel || '').replace(/\\/g, '/');
+                return r && (openFull === r || openFull.endsWith(`/${r}`));
+            });
+            if (!hit)
                 return;
             void (async () => {
                 const msg = dirtyRef.current
@@ -34,12 +43,19 @@ function useDiskChange(selection, dirty, onReload) {
                     onReload();
             })();
         });
-    }, [selection.type, selection.name, confirm, onReload]);
+    }, [selection.type, selection.name, selection.dir, confirm, onReload]);
 }
 function selectionKey(selection) {
     if (selection.type === 'file')
         return `${selection.dir}:${selection.name}`;
     return '';
+}
+
+function displayFileName(name) {
+    const base = String(name || '').trim();
+    if (!base)
+        return '';
+    return base.replace(/\.(md|markdown|txt|text)$/i, '');
 }
 export function DocumentPane() {
     const { selection, setSelection, bumpRefresh, analysisId, reportId } = useAppState();
@@ -74,12 +90,14 @@ export function DocumentPane() {
                     return;
                 if (opened.large) {
                     setLargeFile({ dir: selection.dir, name: opened.name, fileSize: opened.file_size || opened.fileSize });
-                    setLoaded({ key, markdown: '', title: opened.name });
-                    setTitle(opened.name);
+                    const label = displayFileName(opened.name);
+                    setLoaded({ key, markdown: '', title: label });
+                    setTitle(label);
                 } else {
                     setLargeFile(null);
-                    setLoaded({ key, markdown: opened.text || '', title: opened.name });
-                    setTitle(opened.name);
+                    const label = displayFileName(opened.name);
+                    setLoaded({ key, markdown: opened.text || '', title: label });
+                    setTitle(label);
                     setDraft(opened.text || '');
                     setEditorNonce((n) => n + 1);
                 }
@@ -122,8 +140,9 @@ export function DocumentPane() {
                 text: draft,
             });
             setSelection({ type: 'file', dir: selection.dir, name: saved.name });
-            setLoaded({ key: `${selection.dir}:${saved.name}`, markdown: draft, title: saved.name });
-            setTitle(saved.name);
+            const label = displayFileName(saved.name);
+            setLoaded({ key: `${selection.dir}:${saved.name}`, markdown: draft, title: label });
+            setTitle(label);
             bumpRefresh();
         }
         catch (err) {
