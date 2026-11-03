@@ -1,0 +1,21 @@
+{
+  "id": "sentence_length_variation",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Sentence Length Variation",
+  "description": "Sentence length variance and rhythm analysis per chapter.",
+  "usage": "Vary sentence lengths in chapters flagged as monotonous to improve rhythm.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 47,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "sentence_length_variation",
+  "local_config": {}
+}

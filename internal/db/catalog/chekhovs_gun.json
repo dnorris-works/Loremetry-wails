@@ -1,0 +1,25 @@
+{
+  "id": "chekhovs_gun",
+  "group_id": "plot",
+  "group_label": "Craft — Plot & Continuity",
+  "label": "Chekhov's Gun",
+  "description": "Early setups (objects, skills, promises) and whether they pay off.",
+  "usage": "Pay off unused setups or cut them so early mentions earn their keep.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 24,
+  "chapter_instruction": "Track setups and payoffs in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Setups planted",
+    "Payoffs hinted",
+    "Unresolved"
+  ],
+  "final_instruction": "Produce a Chekhov's Gun report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

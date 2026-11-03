@@ -1,0 +1,21 @@
+{
+  "id": "readability_score",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Readability Score",
+  "description": "Flesch readability and grade-level metrics per chapter.",
+  "usage": "Review per-chapter Flesch scores and adjust sentence complexity where grade level is too high.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 46,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "readability_score",
+  "local_config": {}
+}

@@ -1,0 +1,27 @@
+{
+  "id": "pov_discipline",
+  "group_id": "structure",
+  "group_label": "Craft — Structure & Pacing",
+  "label": "POV Discipline",
+  "description": "POV shifts, head-hopping, and information leaks.",
+  "usage": "Fix head-hops and information leaks so each scene stays in the intended POV.",
+  "needs": [
+    "manuscript",
+    "characters"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 22,
+  "chapter_instruction": "Check POV discipline in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "POV",
+    "Head-hops",
+    "Info leaks",
+    "Severity"
+  ],
+  "final_instruction": "Produce a POV Discipline report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

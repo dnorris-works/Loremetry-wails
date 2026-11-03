@@ -1,0 +1,27 @@
+{
+  "id": "mirror_foil_character",
+  "group_id": "character",
+  "group_label": "Craft — Character & Theme",
+  "label": "Mirror/Foil Characters",
+  "description": "Reflect and contrast pairings and what they do for theme.",
+  "usage": "Use mirror/foil pairings to sharpen theme; cut pairings that do no thematic work.",
+  "needs": [
+    "manuscript",
+    "characters",
+    "themes"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 31,
+  "chapter_instruction": "Note mirror/foil pairings and thematic contrast in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Pairings observed",
+    "Contrast or reflection",
+    "Thematic work"
+  ],
+  "final_instruction": "Produce a Mirror/Foil Characters report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

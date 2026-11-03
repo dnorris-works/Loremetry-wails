@@ -1,0 +1,27 @@
+{
+  "id": "continuity_check",
+  "group_id": "plot",
+  "group_label": "Craft — Plot & Continuity",
+  "label": "Continuity Check",
+  "description": "Finds contradicted facts in a manuscript or across a series.",
+  "usage": "Fix contradicted facts in the manuscript (or series bible) before the next draft pass.",
+  "needs": [
+    "manuscript",
+    "characters",
+    "locations"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 23,
+  "chapter_instruction": "Extract facts and flag contradictions or continuity risks in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Facts established",
+    "Possible contradictions",
+    "Open questions"
+  ],
+  "final_instruction": "Produce a Continuity Check report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

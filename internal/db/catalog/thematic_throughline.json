@@ -1,0 +1,26 @@
+{
+  "id": "thematic_throughline",
+  "group_id": "character",
+  "group_label": "Craft — Character & Theme",
+  "label": "Thematic Throughline",
+  "description": "How the central theme holds across scenes and arcs.",
+  "usage": "Reinforce or prune scenes that drift from the central theme.",
+  "needs": [
+    "manuscript",
+    "themes"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 30,
+  "chapter_instruction": "Note theme signals and thematic drift in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Theme signals",
+    "Supporting scenes",
+    "Drift or contradiction"
+  ],
+  "final_instruction": "Produce a Thematic Throughline report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

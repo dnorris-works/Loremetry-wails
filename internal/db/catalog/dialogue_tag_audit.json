@@ -1,0 +1,21 @@
+{
+  "id": "dialogue_tag_audit",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Dialogue Tag Audit",
+  "description": "Dialogue tag frequency and overuse detection.",
+  "usage": "Replace overused tags with action beats or cut redundant attribution.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 50,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "dialogue_tag_audit",
+  "local_config": {}
+}

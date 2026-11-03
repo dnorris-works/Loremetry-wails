@@ -1,0 +1,27 @@
+{
+  "id": "chapter_summaries",
+  "group_id": "kdp-wide",
+  "group_label": "KDP / Wide",
+  "label": "Chapter Plot Summary",
+  "description": "Real plot summary per chapter: who acts, what happens, stakes, and open loops.",
+  "usage": "Optional reference for you—not required by other analyses. Each chapter is summarized with character profiles, then assembled into one document.",
+  "needs": [
+    "manuscript",
+    "characters"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 1,
+  "chapter_instruction": "Write a real plot summary of this single chapter for the author. Cover who is present, what happens (in order), stakes or conflict, and any open loops or unanswered questions. Use concrete names and events—no vague marketing language. When character profiles are provided, treat them as the source of truth for names and relationships; do not invent kinship, roles, or labels that contradict the profiles or are not supported by the chapter. Do not write the full-book document yet.",
+  "chapter_headings": [
+    "Who is present",
+    "What happens",
+    "Stakes or conflict",
+    "Open loops"
+  ],
+  "final_instruction": "Assemble an ordered chapter-by-chapter plot summary document from the chapter notes below. One section per chapter with a clear heading. Keep each summary concrete and faithful to the notes and character profiles; do not invent relationships.",
+  "local_runner": "",
+  "local_config": {}
+}

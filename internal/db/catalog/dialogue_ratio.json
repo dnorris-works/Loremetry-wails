@@ -1,0 +1,21 @@
+{
+  "id": "dialogue_ratio",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Dialogue Ratio",
+  "description": "Dialogue-to-narration ratio per chapter and overall.",
+  "usage": "Add dialogue to narration-heavy chapters or vice versa to improve reader engagement.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 49,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "dialogue_ratio",
+  "local_config": {}
+}

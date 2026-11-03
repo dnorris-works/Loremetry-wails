@@ -1,0 +1,25 @@
+{
+  "id": "show_dont_tell",
+  "group_id": "prose",
+  "group_label": "Craft — Prose",
+  "label": "Show Don't Tell",
+  "description": "Flags passages that tell emotion or judgment instead of showing it.",
+  "usage": "Rewrite flagged telling passages to show emotion through action and sensory detail.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 18,
+  "chapter_instruction": "Find telling vs showing in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Telling spots",
+    "Strong showing",
+    "Priority fixes"
+  ],
+  "final_instruction": "Produce a Show Don't Tell report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

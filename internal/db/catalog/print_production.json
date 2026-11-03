@@ -1,0 +1,23 @@
+{
+  "id": "print_production",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "Print Production",
+  "description": "Page count, trim, spine, and print checklists from word count. No AI.",
+  "usage": "Use word count and spine estimates when choosing trim and ordering a KDP/Ingram cover template.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 39,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "print_production",
+  "local_config": {
+    "words_per_page": 250
+  }
+}

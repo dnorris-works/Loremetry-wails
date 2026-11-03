@@ -1,0 +1,22 @@
+{
+  "id": "recurring_motif_theme_series",
+  "group_id": "series",
+  "group_label": "Craft — Series",
+  "label": "Recurring Motif/Theme (Series)",
+  "description": "Motifs and themes across books — cohesion vs contradiction.",
+  "usage": "Keep motifs coherent across books; resolve contradictions in theme or symbol.",
+  "needs": [
+    "bible",
+    "themes"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "two_step",
+  "sort_order": 37,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "Produce a Recurring Motif/Theme (Series) report from the source summaries. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

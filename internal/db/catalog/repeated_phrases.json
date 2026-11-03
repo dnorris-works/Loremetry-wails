@@ -1,0 +1,21 @@
+{
+  "id": "repeated_phrases",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Repeated Phrase Finder",
+  "description": "Repeated n-gram detection across the manuscript.",
+  "usage": "Vary repeated phrases or find synonyms to reduce reader fatigue.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 53,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "repeated_phrases",
+  "local_config": {}
+}

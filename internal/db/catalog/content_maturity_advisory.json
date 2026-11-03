@@ -1,0 +1,25 @@
+{
+  "id": "content_maturity_advisory",
+  "group_id": "kdp-wide",
+  "group_label": "KDP / Wide",
+  "label": "Content & Maturity Advisory",
+  "description": "Heat level, content warnings, and age guidance for wide stores.",
+  "usage": "Match store maturity settings and content warnings to the advisory below.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 16,
+  "chapter_instruction": "Note content maturity signals in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Heat or intimacy",
+    "Violence or dark content",
+    "Other warnings"
+  ],
+  "final_instruction": "Produce a Content & Maturity Advisory. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

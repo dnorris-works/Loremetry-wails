@@ -1,0 +1,25 @@
+{
+  "id": "stakes_escalation",
+  "group_id": "engagement",
+  "group_label": "Craft — Reader Engagement",
+  "label": "Stakes Escalation",
+  "description": "How stakes rise, plateau, or reverse across the arc.",
+  "usage": "Raise or reset stakes where the arc plateaus; cut reversals that undercut tension.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 34,
+  "chapter_instruction": "Track how stakes move in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Stakes level",
+    "Escalation or plateau",
+    "Reversals"
+  ],
+  "final_instruction": "Produce a Stakes Escalation report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

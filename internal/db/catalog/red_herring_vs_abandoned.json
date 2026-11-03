@@ -1,0 +1,25 @@
+{
+  "id": "red_herring_vs_abandoned",
+  "group_id": "plot",
+  "group_label": "Craft — Plot & Continuity",
+  "label": "Red Herring vs Abandoned",
+  "description": "Separates intentional misdirection from dropped plot threads.",
+  "usage": "Keep intentional misdirection; restore or remove dropped threads.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 25,
+  "chapter_instruction": "Separate intentional misdirection from dropped threads in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Possible red herrings",
+    "Dropped or abandoned threads",
+    "Notes"
+  ],
+  "final_instruction": "Produce a Red Herring vs Abandoned report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

@@ -1,0 +1,21 @@
+{
+  "id": "passive_voice",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Passive Voice Density",
+  "description": "Passive voice density per chapter.",
+  "usage": "Rewrite passive constructions to active voice where clarity and energy improve.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 51,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "passive_voice",
+  "local_config": {}
+}

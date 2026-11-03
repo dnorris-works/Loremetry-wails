@@ -1,0 +1,35 @@
+{
+  "id": "line_polish",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "Line-level Polish",
+  "description": "Filter words, echoes, adverbs, and rough passives. No AI.",
+  "usage": "Search the manuscript for listed filter words and echoes; cut or replace the worst repeats.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 44,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "line_polish",
+  "local_config": {
+    "filter_words": [
+      "just",
+      "really",
+      "very",
+      "suddenly",
+      "somewhat",
+      "actually",
+      "basically",
+      "literally",
+      "quite",
+      "rather"
+    ],
+    "echo_window": 12
+  }
+}

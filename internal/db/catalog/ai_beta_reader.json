@@ -1,0 +1,28 @@
+{
+  "id": "ai_beta_reader",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "AI Beta Reader",
+  "description": "Chapter-by-chapter reader reactions, engagement, and put-down risk.",
+  "usage": "Prioritize chapters with high put-down risk; revise hooks and endings there first.",
+  "needs": [
+    "manuscript",
+    "characters",
+    "locations"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 40,
+  "chapter_instruction": "React as a beta reader to this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Engagement",
+    "Confusion",
+    "Put-down risk",
+    "Hook to next"
+  ],
+  "final_instruction": "Produce an AI Beta Reader report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

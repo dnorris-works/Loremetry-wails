@@ -1,0 +1,21 @@
+{
+  "id": "chapter_balance",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Chapter Balance",
+  "description": "Word-count balance and outlier detection across chapters.",
+  "usage": "Consider splitting long chapters or expanding short ones to even the reading pace.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 48,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "chapter_balance",
+  "local_config": {}
+}

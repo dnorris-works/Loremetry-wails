@@ -1,0 +1,29 @@
+{
+  "id": "kdp_keywords",
+  "group_id": "kdp-wide",
+  "group_label": "KDP / Wide",
+  "label": "KDP Keywords",
+  "description": "Seven KDP keyword strings (50 characters or fewer).",
+  "usage": "Paste each string into KDP's seven keyword slots (50 characters or fewer).",
+  "needs": [
+    "manuscript",
+    "plot"
+  ],
+  "depends_on": [
+    "genre_analysis"
+  ],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 6,
+  "chapter_instruction": "Extract marketable genre and content signals from this chapter (not a full metadata sheet). Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Tone and tropes",
+    "Audience signals",
+    "Heat or content notes",
+    "Keyword phrases"
+  ],
+  "final_instruction": "Produce the requested KDP/wide marketing analysis from the chapter signal notes and any other sources. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

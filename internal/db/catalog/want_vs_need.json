@@ -1,0 +1,26 @@
+{
+  "id": "want_vs_need",
+  "group_id": "character",
+  "group_label": "Craft — Character & Theme",
+  "label": "Want vs Need",
+  "description": "External want vs internal need for major characters.",
+  "usage": "Align scenes so external want and internal need pull characters through the arc.",
+  "needs": [
+    "manuscript",
+    "characters"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 29,
+  "chapter_instruction": "Track external want vs internal need for major characters in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "External wants",
+    "Internal needs",
+    "Alignment or conflict"
+  ],
+  "final_instruction": "Produce a Want vs Need report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

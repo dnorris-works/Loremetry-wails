@@ -1,0 +1,25 @@
+{
+  "id": "cliffhanger_score",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "Cliffhanger Score",
+  "description": "How hard each chapter ending pulls into the next.",
+  "usage": "Strengthen weak chapter endings so readers turn the page.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 41,
+  "chapter_instruction": "Score how hard this chapter ending pulls into the next. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Ending beat",
+    "Pull forward (1-5)",
+    "Why"
+  ],
+  "final_instruction": "Produce a Cliffhanger Score report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

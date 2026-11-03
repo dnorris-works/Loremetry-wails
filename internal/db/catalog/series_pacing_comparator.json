@@ -1,0 +1,25 @@
+{
+  "id": "series_pacing_comparator",
+  "group_id": "series",
+  "group_label": "Craft — Series",
+  "label": "Series Pacing Comparator",
+  "description": "Pacing compared across books in a series.",
+  "usage": "Adjust book length and beat density so series pacing feels consistent.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 36,
+  "chapter_instruction": "Note pacing density for series comparison in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Pace feel",
+    "Beat density",
+    "Drag or rush"
+  ],
+  "final_instruction": "Produce a Series Pacing Comparator report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

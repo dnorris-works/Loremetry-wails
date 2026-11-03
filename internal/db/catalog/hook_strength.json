@@ -1,0 +1,21 @@
+{
+  "id": "hook_strength",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "Hook Strength",
+  "description": "Whether a browsing reader would keep going past page one.",
+  "usage": "Rewrite the opening if a browsing reader would stop before page two.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 42,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "",
+  "local_config": {}
+}

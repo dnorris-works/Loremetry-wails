@@ -1,0 +1,26 @@
+{
+  "id": "dramatic_irony",
+  "group_id": "engagement",
+  "group_label": "Craft — Reader Engagement",
+  "label": "Dramatic Irony",
+  "description": "Moments the reader knows more than the characters.",
+  "usage": "Lean into reader-knows-more moments where tension or humor pays off.",
+  "needs": [
+    "manuscript",
+    "characters"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 33,
+  "chapter_instruction": "Find reader-knows-more moments in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Irony moments",
+    "Tension or humor payoff",
+    "Missed opportunities"
+  ],
+  "final_instruction": "Produce a Dramatic Irony report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

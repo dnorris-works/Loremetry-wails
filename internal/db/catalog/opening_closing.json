@@ -1,0 +1,21 @@
+{
+  "id": "opening_closing",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Opening/Closing Strength",
+  "description": "Opening and closing sentence strength heuristics per chapter.",
+  "usage": "Strengthen weak chapter openings with hooks and closings with forward momentum.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 55,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "opening_closing",
+  "local_config": {}
+}

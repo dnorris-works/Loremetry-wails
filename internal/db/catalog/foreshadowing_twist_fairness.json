@@ -1,0 +1,25 @@
+{
+  "id": "foreshadowing_twist_fairness",
+  "group_id": "plot",
+  "group_label": "Craft — Plot & Continuity",
+  "label": "Foreshadowing & Twist Fairness",
+  "description": "Whether foreshadowing is fair and twists feel earned.",
+  "usage": "Add fair clues where twists feel cheap; trim over-telegraphing where they feel obvious.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 26,
+  "chapter_instruction": "Judge foreshadowing and twist fairness clues in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Foreshadowing planted",
+    "Twist signals",
+    "Fairness notes"
+  ],
+  "final_instruction": "Produce a Foreshadowing & Twist Fairness report. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

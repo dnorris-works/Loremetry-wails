@@ -1,0 +1,25 @@
+{
+  "id": "story_beat_placement",
+  "group_id": "structure",
+  "group_label": "Craft — Structure & Pacing",
+  "label": "Story Beat Placement",
+  "description": "Beat timing against common story frameworks.",
+  "usage": "Move, add, or cut beats so structural milestones land where the framework expects.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "by_chapter",
+  "sort_order": 20,
+  "chapter_instruction": "Note story beats and structural milestones in this chapter. Fill only the required markdown headings below (use exactly those heading texts). Use short quotes or location cues. Write \"none\" under a heading if empty. Do not write the full-book report yet—chapter notes only.",
+  "chapter_headings": [
+    "Beats present",
+    "Timing notes",
+    "Missing or early/late beats"
+  ],
+  "final_instruction": "Produce a Story Beat Placement report against common frameworks. Merge the chapter notes below into one author-facing markdown report for this analysis. Group patterns across chapters, cite chapter names, rank severity where useful, and do not invent manuscript details not supported by the notes.",
+  "local_runner": "",
+  "local_config": {}
+}

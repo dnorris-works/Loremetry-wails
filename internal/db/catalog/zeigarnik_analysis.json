@@ -1,0 +1,29 @@
+{
+  "id": "zeigarnik_analysis",
+  "group_id": "engagement",
+  "group_label": "Craft — Reader Engagement",
+  "label": "Zeigarnik Effect",
+  "description": "Heuristic scan for open loops, cliffhangers, and unresolved threads. No AI.",
+  "usage": "Use Compare to review flagged chapter endings; strengthen weak open loops and leave intentional closures alone.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": true,
+  "ai_profile": "single",
+  "sort_order": 32,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "zeigarnik_analysis",
+  "local_config": {
+    "open_loop_cues": [
+      "would",
+      "until",
+      "tomorrow",
+      "later",
+      "unless"
+    ]
+  }
+}

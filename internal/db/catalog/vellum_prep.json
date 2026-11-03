@@ -1,0 +1,21 @@
+{
+  "id": "vellum_prep",
+  "group_id": "publish",
+  "group_label": "Publish",
+  "label": "Vellum & Atticus Prep",
+  "description": "Clean markdown manuscript for Vellum or Atticus import. No AI.",
+  "usage": "Copy or export this markdown into Vellum or Atticus as a new book import.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 45,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "vellum_prep",
+  "local_config": {}
+}

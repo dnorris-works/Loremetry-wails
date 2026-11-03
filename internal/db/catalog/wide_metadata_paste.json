@@ -1,0 +1,24 @@
+{
+  "id": "wide_metadata_paste",
+  "group_id": "kdp-wide",
+  "group_label": "KDP / Wide",
+  "label": "Wide Metadata Paste Sheet",
+  "description": "Copy-ready wide metadata for aggregators and stores.",
+  "usage": "Copy each block into the matching aggregator or store metadata field.",
+  "needs": [
+    "plot"
+  ],
+  "depends_on": [
+    "bisac_classification",
+    "discovery_keywords"
+  ],
+  "uses_ai": true,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 17,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "",
+  "local_config": {}
+}

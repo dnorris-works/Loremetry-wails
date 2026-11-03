@@ -1,0 +1,23 @@
+{
+  "id": "sticky_sentences",
+  "group_id": "metrics",
+  "group_label": "Craft — Metrics",
+  "label": "Sticky Sentences",
+  "description": "Glue-word density and sticky sentence detection.",
+  "usage": "Rewrite sticky sentences by replacing glue words with concrete nouns and verbs.",
+  "needs": [
+    "manuscript"
+  ],
+  "depends_on": [],
+  "uses_ai": false,
+  "uses_merge": false,
+  "ai_profile": "single",
+  "sort_order": 52,
+  "chapter_instruction": "",
+  "chapter_headings": [],
+  "final_instruction": "",
+  "local_runner": "sticky_sentences",
+  "local_config": {
+    "glue_threshold": 45
+  }
+}
